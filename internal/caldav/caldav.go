@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+
+	"golang.org/x/term"
 
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
@@ -16,7 +19,19 @@ func FailOnError(err error, msg string) {
 	}
 }
 
-func CreateClient() (*caldav.Client, context.Context) {
+func GetCredentials() (string, string) {
+	var username, password string
+	fmt.Print("username: ")
+	fmt.Scan(&username)
+	fmt.Print("password: ")
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+	FailOnError(err, "Error reading password")
+	password = string(bytePassword)
+	fmt.Println()
+	return username, password
+}
+
+func CreateClient(url string) (*caldav.Client, context.Context) {
 	username, password := GetCredentials()
 	httpClient := webdav.HTTPClientWithBasicAuth(&http.Client{}, username, password)
 	client, err := caldav.NewClient(httpClient, url)

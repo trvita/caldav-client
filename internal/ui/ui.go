@@ -3,11 +3,17 @@ package ui
 import (
 	"context"
 	"fmt"
-	"os"
+	"log"
 
 	"github.com/emersion/go-webdav/caldav"
-	"golang.org/x/term"
+	mycal "github.com/trvita/caldav-client/internal/caldav"
 )
+
+func FailOnError(err error, msg string) {
+	if err != nil {
+		log.Panicf("\u001b[31m%s: %s\u001b[0m\n", msg, err)
+	}
+}
 
 func ClearLines(num int) {
 	for i := 0; i < num; i++ {
@@ -20,20 +26,7 @@ func ColouredLine(str string) {
 	fmt.Printf("\u001b[34m%s\u001b[0m\n", str)
 }
 
-func GetCredentials() (string, string) {
-	var username, password string
-	fmt.Print("username: ")
-	fmt.Scan(&username)
-	fmt.Print("password: ")
-	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
-	FailOnError(err, "Error reading password")
-	password = string(bytePassword)
-	fmt.Println()
-	ClearLines(3)
-	return username, password
-}
-
-func StartMenu() {
+func StartMenu(url string) {
 	ColouredLine("Main menu:")
 	for {
 		fmt.Println("1. Log in")
@@ -43,7 +36,9 @@ func StartMenu() {
 		ClearLines(3)
 		switch answer {
 		case 1:
-			CalendarMenu(CreateClient())
+			client, ctx := mycal.CreateClient(url)
+			ClearLines(3)
+			CalendarMenu(client, ctx)
 		case 0:
 			ColouredLine("Shutting down...")
 			return
@@ -67,17 +62,17 @@ func CalendarMenu(client *caldav.Client, ctx context.Context) {
 		ClearLines(6)
 		switch answer {
 		case 1:
-			ListCalendars(client, ctx)
+			mycal.ListCalendars(client, ctx)
 		case 2:
 			EventMenu("FIX", ctx) // FIX!!! what to pass?
 		case 3:
-			//DeleteCalendar(client)
+			//mycal.DeleteCalendar(client)
 		case 4:
-			//ListEvents(client)
+			//mycal.ListEvents(client)
 		case 5:
-			//CreateEvent(client)
+			//mycal.CreateEvent(client)
 		case 6:
-			//DeleteEvent(client)
+			//mycal.DeleteEvent(client)
 		case 0:
 			ColouredLine("Logging out...")
 			return
