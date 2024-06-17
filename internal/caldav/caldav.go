@@ -6,9 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/term"
 
+	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 )
@@ -38,6 +40,7 @@ func CreateClient(url string) (*caldav.Client, context.Context) {
 	FailOnError(err, "Error creating client")
 	return client, context.Background()
 }
+
 func ListCalendars(client *caldav.Client, ctx context.Context) {
 	principal, err := client.FindCurrentUserPrincipal(ctx)
 	FailOnError(err, "Error finding current user principal")
@@ -49,16 +52,24 @@ func ListCalendars(client *caldav.Client, ctx context.Context) {
 		fmt.Printf("Calendar: %s\n", calendar.Name)
 	}
 }
-func CreateCalendar(client *caldav.Client, username string, ctx context.Context) {
-	homeset, err := client.FindCalendarHomeSet(ctx, username)
+
+func CreateCalendar(client *caldav.Client, ctx context.Context, calendarName string) {
+	principal, err := client.FindCurrentUserPrincipal(ctx)
+	FailOnError(err, "Error finding current user principal")
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar home set")
-	calendars, err := client.FindCalendars(ctx, homeset)
-	FailOnError(err, "Error fetching calendars")
-	for _, calendar := range calendars {
-		fmt.Printf("Calendar: %s\n", calendar.Name)
-	}
+	newCalendar := ical.NewCalendar()
+	newCalendar.Props.SetDateTime(ical.PropTimezoneID, time.Now())
+	newCalendar.Props.SetText(ical.PropVersion, "2.0")
+	newCalendar.Props.SetText(ical.PropProductID, "-//trvita//caldav-client//EN")
+	newCalendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+
+	calendarPath := homeset + "/" + calendarName + ".ics"
+	_, err = client.PutCalendarObject(ctx, calendarPath, newCalendar)
+	FailOnError(err, "Error creating calendar")
 }
 
-// func GetCalendarDetails() (string, string) {
-
-// }
+func ListEvents(client *caldav.Client, ctx context.Context, calendarName string)  {}
+func FindEvent(client *caldav.Client, ctx context.Context, calendarName string)   {}
+func CreateEvent(client *caldav.Client, ctx context.Context, calendarName string) {}
+func DeleteEvent(client *caldav.Client, ctx context.Context, calendarName string) {}
