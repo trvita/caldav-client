@@ -45,16 +45,17 @@ func StartMenu(url string) {
 		switch answer {
 		case 1:
 			var client *caldav.Client
+			var principal string
 			var ctx context.Context
 			var err error
 			for {
-				client, ctx, err = mycal.CreateClient(url, os.Stdin)
+				client, principal, ctx, err = mycal.CreateClient(url, os.Stdin)
+			ClearLines(2)
 				if err == nil {
 					break
 				}
 			}
-			ClearLines(3)
-			CalendarMenu(client, ctx)
+			CalendarMenu(client, principal, ctx)
 		case 0:
 			ColouredLine("Shutting down...")
 			return
@@ -62,9 +63,7 @@ func StartMenu(url string) {
 	}
 }
 
-func CalendarMenu(client *caldav.Client, ctx context.Context) {
-	principal, err := client.FindCurrentUserPrincipal(ctx)
-	FailOnError(err, "Error finding current user principal")
+func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) {
 	ColouredLine("Current user: " + principal[1:len(principal)-1])
 	for {
 		fmt.Println("1. List calendars")

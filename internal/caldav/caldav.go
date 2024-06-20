@@ -43,14 +43,21 @@ func GetCredentials(r io.Reader) (string, string) {
 	return username, password
 }
 
-func CreateClient(url string, r io.Reader) (*caldav.Client, context.Context, error) {
+func CreateClient(url string, r io.Reader) (*caldav.Client, string, context.Context, error) {
 	username, password := GetCredentials(r)
 	httpClient := webdav.HTTPClientWithBasicAuth(&http.Client{}, username, password)
 	client, err := caldav.NewClient(httpClient, url)
-	if err != nil {
-		return nil, nil, err
+	if err!= nil 	{
+		return nil, "", nil, err
 	}
-	return client, context.Background(), nil
+
+	ctx := context.Background()
+	principal, err := client.FindCurrentUserPrincipal(ctx)
+	if err!= nil 	{
+		return nil, "", nil, err
+	}
+	
+	return client, principal, ctx, nil
 }
 
 func ListCalendars(client *caldav.Client, ctx context.Context) {

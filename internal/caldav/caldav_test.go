@@ -13,3 +13,11 @@ func TestGetCredentials(t *testing.T) {
 	assert.Equal(t, "testuser", username)
 	assert.Equal(t, "testpassword", password)
 }
+
+func TestCreateClient(t *testing.T) {
+	client, principal, ctx, err := CreateClient("http://localhost:5232", bytes.NewBufferString("testuser\ntestpassword\n"))
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+}

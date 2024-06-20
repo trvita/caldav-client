@@ -2,10 +2,12 @@
 
 `htpasswd ./radicale/users someusername`
 
-# run Radicale:
+# start Radicale:
 
 `./runRadicale.sh`
 
 # build and run client:
 
 `make run`
+
+# before running tests, remember to start Radicale
