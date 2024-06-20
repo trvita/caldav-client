@@ -1,7 +1,7 @@
 #! /bin/bash
 
 python3 -m pip install --upgrade radicale
-python3 -m radicale --config=./radicale/config
+python3 -m radicale --config=./testRadicale/testconfig
 
 #  http://localhost:5232
 

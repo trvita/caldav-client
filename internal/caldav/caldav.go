@@ -60,9 +60,7 @@ func CreateClient(url string, r io.Reader) (*caldav.Client, string, context.Cont
 	return client, principal, ctx, nil
 }
 
-func ListCalendars(client *caldav.Client, ctx context.Context) {
-	principal, err := client.FindCurrentUserPrincipal(ctx)
-	FailOnError(err, "Error finding current user principal")
+func ListCalendars(client *caldav.Client, principal string, ctx context.Context) {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar home set")
 	calendars, err := client.FindCalendars(ctx, homeset)

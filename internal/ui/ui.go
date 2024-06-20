@@ -77,7 +77,7 @@ func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) 
 		ClearLines(6)
 		switch answer {
 		case 1:
-			mycal.ListCalendars(client, ctx)
+			mycal.ListCalendars(client, principal, ctx)
 		case 2:
 			EventMenu(client, "FIX", ctx) // FIX!!! what to pass?
 		case 3:
