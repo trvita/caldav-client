@@ -1,18 +1,18 @@
 package caldav
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"time"
-
-	"golang.org/x/term"
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
+	"golang.org/x/term"
 )
 
 func FailOnError(err error, msg string) {
@@ -21,24 +21,36 @@ func FailOnError(err error, msg string) {
 	}
 }
 
-func GetCredentials() (string, string) {
-	var username, password string
+func GetCredentials(r io.Reader) (string, string) {
+	reader := bufio.NewReader(r)
 	fmt.Print("username: ")
-	fmt.Scan(&username)
+	username, err := reader.ReadString('\n')
+	FailOnError(err, "Error reading username")
+	username = username[:len(username)-1]
+
 	fmt.Print("password: ")
-	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
-	FailOnError(err, "Error reading password")
-	password = string(bytePassword)
-	fmt.Println()
+	var password string
+	if r == os.Stdin {
+		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+		FailOnError(err, "Error reading password")
+		password = string(bytePassword)
+		fmt.Println()
+	} else {
+		password, err = reader.ReadString('\n')
+		FailOnError(err, "Error reading password")
+		password = password[:len(password)-1]
+	}
 	return username, password
 }
 
-func CreateClient(url string) (*caldav.Client, context.Context) {
-	username, password := GetCredentials()
+func CreateClient(url string, r io.Reader) (*caldav.Client, context.Context, error) {
+	username, password := GetCredentials(r)
 	httpClient := webdav.HTTPClientWithBasicAuth(&http.Client{}, username, password)
 	client, err := caldav.NewClient(httpClient, url)
-	FailOnError(err, "Error creating client")
-	return client, context.Background()
+	if err != nil {
+		return nil, nil, err
+	}
+	return client, context.Background(), nil
 }
 
 func ListCalendars(client *caldav.Client, ctx context.Context) {
@@ -59,10 +71,10 @@ func CreateCalendar(client *caldav.Client, ctx context.Context, calendarName str
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar home set")
 	newCalendar := ical.NewCalendar()
-	newCalendar.Props.SetDateTime(ical.PropTimezoneID, time.Now())
-	newCalendar.Props.SetText(ical.PropVersion, "2.0")
-	newCalendar.Props.SetText(ical.PropProductID, "-//trvita//caldav-client//EN")
-	newCalendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+	// newCalendar.Props.SetDateTime(ical.PropTimezoneID, time.Now())
+	// newCalendar.Props.SetText(ical.PropVersion, "2.0")
+	// newCalendar.Props.SetText(ical.PropProductID, "-//trvita//caldav-client//EN")
+	// newCalendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 
 	calendarPath := homeset + "/" + calendarName + ".ics"
 	_, err = client.PutCalendarObject(ctx, calendarPath, newCalendar)

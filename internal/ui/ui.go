@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/emersion/go-webdav/caldav"
 	mycal "github.com/trvita/caldav-client/internal/caldav"
@@ -43,7 +44,15 @@ func StartMenu(url string) {
 		ClearLines(3)
 		switch answer {
 		case 1:
-			client, ctx := mycal.CreateClient(url)
+			var client *caldav.Client
+			var ctx context.Context
+			var err error
+			for {
+				client, ctx, err = mycal.CreateClient(url, os.Stdin)
+				if err == nil {
+					break
+				}
+			}
 			ClearLines(3)
 			CalendarMenu(client, ctx)
 		case 0:
