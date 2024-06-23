@@ -115,6 +115,8 @@ func StartMenu(url string) {
 }
 
 func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) {
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	FailOnError(err, "Error finding calendar homeset")
 	ColouredLine("Current user: " + principal[1:len(principal)-1])
 	for {
 		fmt.Println("1. List calendars")
@@ -126,13 +128,14 @@ func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) 
 		ClearLines(6)
 		switch answer {
 		case 1:
-			mycal.ListCalendars(ctx, client, principal)
+			mycal.ListCalendars(ctx, client, homeset)
 		case 2:
-			EventMenu(ctx, client, principal)
+			calendarName := GetCalendarName()
+			EventMenu(ctx, client, homeset, calendarName)
 		case 3:
 			calendarName := GetCalendarName()
 			initialEvent := GetEvent()
-			mycal.CreateCalendar(ctx, client, principal, calendarName, initialEvent)
+			mycal.CreateCalendar(ctx, client, homeset, calendarName, initialEvent)
 		case 0:
 			ColouredLine("Logging out...")
 			return
@@ -140,11 +143,10 @@ func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) 
 	}
 }
 
-func EventMenu(ctx context.Context, client *caldav.Client, calendar string) {
+func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calendar string) {
 	ColouredLine("Current calendar:" + calendar)
 	for {
 		fmt.Println("1. List events")
-		fmt.Println("2. Find event")
 		fmt.Println("3. Create event")
 		fmt.Println("4. Delete event")
 		fmt.Println("0. Back to calendar menu")
@@ -153,13 +155,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, calendar string) {
 		ClearLines(6)
 		switch answer {
 		case 1:
-			mycal.ListEvents(ctx, client, calendar)
-		case 2:
-			mycal.FindEvent(ctx, client, calendar)
+			mycal.ListEvents(ctx, client, homeset, calendar)
 		case 3:
-			mycal.CreateEvent(ctx, client, calendar)
+			event := GetEvent()
+			mycal.CreateEvent(ctx, client, homeset, calendar, event)
 		case 4:
-			mycal.DeleteEvent(ctx, client, calendar)
+			mycal.DeleteEvent(ctx, client, homeset, calendar)
 		case 0:
 			ColouredLine("Returning to calendar menu...")
 			return

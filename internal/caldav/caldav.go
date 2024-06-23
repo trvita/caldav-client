@@ -61,9 +61,7 @@ func CreateClient(url string, r io.Reader) (*caldav.Client, string, context.Cont
 	return client, principal, ctx, nil
 }
 
-func ListCalendars(ctx context.Context, client *caldav.Client, principal string) {
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	FailOnError(err, "Error finding calendar home set")
+func ListCalendars(ctx context.Context, client *caldav.Client, homeset string) {
 	calendars, err := client.FindCalendars(ctx, homeset)
 	FailOnError(err, "Error fetching calendars")
 	for _, calendar := range calendars {
@@ -71,9 +69,7 @@ func ListCalendars(ctx context.Context, client *caldav.Client, principal string)
 	}
 }
 
-func CreateCalendar(ctx context.Context, client *caldav.Client, principal string, calendarName string, event *ical.Event) {
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	FailOnError(err, "Error finding calendar home set")
+func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) {
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
@@ -83,14 +79,26 @@ func CreateCalendar(ctx context.Context, client *caldav.Client, principal string
 
 	var buf strings.Builder
 	encoder := ical.NewEncoder(&buf)
-	err = encoder.Encode(calendar)
+	err := encoder.Encode(calendar)
 	FailOnError(err, "error encoding calendar")
 	calendarURL := homeset + calendarName + "/"
 	_, err = client.PutCalendarObject(ctx, calendarURL, calendar)
 	FailOnError(err, "Error putting calendar object")
 }
 
-func ListEvents(ctx context.Context, client *caldav.Client, calendarName string)  {}
-func FindEvent(ctx context.Context, client *caldav.Client, calendarName string)   {}
-func CreateEvent(ctx context.Context, client *caldav.Client, calendarName string) {}
-func DeleteEvent(ctx context.Context, client *caldav.Client, calendarName string) {}
+func ListEvents(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {
+	calendarURL := homeset + calendarName + "/"
+	calendar, err := client.GetCalendarObject(ctx, calendarURL)
+	FailOnError(err, "Error getting calendar object")
+	for _, event := range calendar.Data.Events() {
+		summary, err := event.Props.Text("SUMMARY")
+		FailOnError(err, "Error reading summary")
+		fmt.Printf("Event: %s\n", summary)
+	}
+
+}
+func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) {
+	// calendarURL := homeset + calendarName + "/"
+	// calendar, err := client.GetCalendarObject(ctx, calendarURL)
+}
+func DeleteEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {}
