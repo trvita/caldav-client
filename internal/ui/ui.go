@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav/caldav"
+	"github.com/google/uuid"
 	mycal "github.com/trvita/caldav-client/internal/caldav"
 )
 
@@ -34,6 +37,54 @@ func GetCalendarName() string {
 	return calendarName
 }
 
+func GetEvent() *ical.Event {
+	var summary, startDate, startTime, endDate, endTime string
+	var startDateTime, endDateTime time.Time
+	var err error
+
+	fmt.Print("Enter event summary: ")
+	fmt.Scan(&summary)
+	for {
+		fmt.Print("Enter event start date (YYYY.MM.DD): ")
+		fmt.Scan(&startDate)
+
+		fmt.Print("Enter event start time (HH.MM.SS): ")
+		fmt.Scan(&startTime)
+
+		fmt.Print("Enter event end date (YYYY.MM.DD): ")
+		fmt.Scan(&endDate)
+
+		fmt.Print("Enter event end time (HH.MM.SS): ")
+		fmt.Scan(&endTime)
+
+		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
+		if err != nil {
+			fmt.Println("invalid start date/time format")
+			continue
+		}
+
+		endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
+		if err != nil {
+			fmt.Println("invalid end date/time format")
+			continue
+		}
+		break
+	}
+	event := ical.NewEvent()
+
+	id, err := uuid.NewUUID()
+	if err != nil {
+		log.Fatalf("could not generate UUID: %v", err)
+	}
+	event.Props.SetText(ical.PropUID, id.String())
+	event.Props.SetText(ical.PropSummary, summary)
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
+	event.Props.SetDateTime(ical.PropDateTimeStart, startDateTime)
+	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
+
+	return event
+}
+
 func StartMenu(url string) {
 	ColouredLine("Main menu:")
 	for {
@@ -50,7 +101,7 @@ func StartMenu(url string) {
 			var err error
 			for {
 				client, principal, ctx, err = mycal.CreateClient(url, os.Stdin)
-			ClearLines(2)
+				ClearLines(2)
 				if err == nil {
 					break
 				}
@@ -69,26 +120,19 @@ func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) 
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")
 		fmt.Println("3. Create calendar")
-		fmt.Println("4. Delete calendar")
-		// fmt.Println("5. Update calendar")
 		fmt.Println("0. Log out")
 		var answer int
 		fmt.Scan(&answer)
 		ClearLines(6)
 		switch answer {
 		case 1:
-			mycal.ListCalendars(client, principal, ctx)
+			mycal.ListCalendars(ctx, client, principal)
 		case 2:
-			EventMenu(client, "FIX", ctx) // FIX!!! what to pass?
+			EventMenu(ctx, client, principal)
 		case 3:
 			calendarName := GetCalendarName()
-			mycal.CreateCalendar(client, ctx, calendarName)
-		case 4:
-			//mycal.ListEvents(client)
-		case 5:
-			//mycal.CreateEvent(client)
-		case 6:
-			//mycal.DeleteEvent(client)
+			initialEvent := GetEvent()
+			mycal.CreateCalendar(ctx, client, principal, calendarName, initialEvent)
 		case 0:
 			ColouredLine("Logging out...")
 			return
@@ -96,7 +140,7 @@ func CalendarMenu(client *caldav.Client, principal string, ctx context.Context) 
 	}
 }
 
-func EventMenu(client *caldav.Client, calendar string, ctx context.Context) {
+func EventMenu(ctx context.Context, client *caldav.Client, calendar string) {
 	ColouredLine("Current calendar:" + calendar)
 	for {
 		fmt.Println("1. List events")
@@ -109,13 +153,13 @@ func EventMenu(client *caldav.Client, calendar string, ctx context.Context) {
 		ClearLines(6)
 		switch answer {
 		case 1:
-			mycal.ListEvents(client, ctx, calendar)
+			mycal.ListEvents(ctx, client, calendar)
 		case 2:
-			mycal.FindEvent(client, ctx, calendar)
+			mycal.FindEvent(ctx, client, calendar)
 		case 3:
-			mycal.CreateEvent(client, ctx, calendar)
+			mycal.CreateEvent(ctx, client, calendar)
 		case 4:
-			mycal.DeleteEvent(client, ctx, calendar)
+			mycal.DeleteEvent(ctx, client, calendar)
 		case 0:
 			ColouredLine("Returning to calendar menu...")
 			return

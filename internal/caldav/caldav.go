@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
@@ -47,20 +48,20 @@ func CreateClient(url string, r io.Reader) (*caldav.Client, string, context.Cont
 	username, password := GetCredentials(r)
 	httpClient := webdav.HTTPClientWithBasicAuth(&http.Client{}, username, password)
 	client, err := caldav.NewClient(httpClient, url)
-	if err!= nil 	{
+	if err != nil {
 		return nil, "", nil, err
 	}
 
 	ctx := context.Background()
 	principal, err := client.FindCurrentUserPrincipal(ctx)
-	if err!= nil 	{
+	if err != nil {
 		return nil, "", nil, err
 	}
-	
+
 	return client, principal, ctx, nil
 }
 
-func ListCalendars(client *caldav.Client, principal string, ctx context.Context) {
+func ListCalendars(ctx context.Context, client *caldav.Client, principal string) {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar home set")
 	calendars, err := client.FindCalendars(ctx, homeset)
@@ -70,23 +71,26 @@ func ListCalendars(client *caldav.Client, principal string, ctx context.Context)
 	}
 }
 
-func CreateCalendar(client *caldav.Client, ctx context.Context, calendarName string) {
-	principal, err := client.FindCurrentUserPrincipal(ctx)
-	FailOnError(err, "Error finding current user principal")
+func CreateCalendar(ctx context.Context, client *caldav.Client, principal string, calendarName string, event *ical.Event) {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar home set")
-	newCalendar := ical.NewCalendar()
-	// newCalendar.Props.SetDateTime(ical.PropTimezoneID, time.Now())
-	// newCalendar.Props.SetText(ical.PropVersion, "2.0")
-	// newCalendar.Props.SetText(ical.PropProductID, "-//trvita//caldav-client//EN")
-	// newCalendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+	calendar := ical.NewCalendar()
+	calendar.Props.SetText(ical.PropVersion, "2.0")
+	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
+	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 
-	calendarPath := homeset + "/" + calendarName + ".ics"
-	_, err = client.PutCalendarObject(ctx, calendarPath, newCalendar)
-	FailOnError(err, "Error creating calendar")
+	calendar.Children = append(calendar.Children, event.Component)
+
+	var buf strings.Builder
+	encoder := ical.NewEncoder(&buf)
+	err = encoder.Encode(calendar)
+	FailOnError(err, "error encoding calendar")
+	calendarURL := homeset + calendarName + "/"
+	_, err = client.PutCalendarObject(ctx, calendarURL, calendar)
+	FailOnError(err, "Error putting calendar object")
 }
 
-func ListEvents(client *caldav.Client, ctx context.Context, calendarName string)  {}
-func FindEvent(client *caldav.Client, ctx context.Context, calendarName string)   {}
-func CreateEvent(client *caldav.Client, ctx context.Context, calendarName string) {}
-func DeleteEvent(client *caldav.Client, ctx context.Context, calendarName string) {}
+func ListEvents(ctx context.Context, client *caldav.Client, calendarName string)  {}
+func FindEvent(ctx context.Context, client *caldav.Client, calendarName string)   {}
+func CreateEvent(ctx context.Context, client *caldav.Client, calendarName string) {}
+func DeleteEvent(ctx context.Context, client *caldav.Client, calendarName string) {}

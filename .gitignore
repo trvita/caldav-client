@@ -1,4 +1,4 @@
 go.mod
-radicale/*
+radicale/
 myRadicale.sh
 build/
