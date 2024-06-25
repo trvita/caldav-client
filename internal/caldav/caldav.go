@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
@@ -27,7 +28,7 @@ func GetCredentials(r io.Reader) (string, string) {
 	fmt.Print("username: ")
 	username, err := reader.ReadString('\n')
 	FailOnError(err, "Error reading username")
-	username = username[:len(username)-1]
+	username = strings.TrimSpace(username)
 
 	fmt.Print("password: ")
 	var password string
@@ -39,7 +40,7 @@ func GetCredentials(r io.Reader) (string, string) {
 	} else {
 		password, err = reader.ReadString('\n')
 		FailOnError(err, "Error reading password")
-		password = password[:len(password)-1]
+		password = strings.TrimSpace(password)
 	}
 	return username, password
 }
@@ -69,13 +70,13 @@ func ListCalendars(ctx context.Context, client *caldav.Client, homeset string) {
 	}
 }
 
-func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) {
+func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, calendarName string, summary string, uid string, startDateTime time.Time, endDateTime time.Time) {
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 
-	calendar.Children = append(calendar.Children, event.Component)
+	CreateEvent(ctx, client, homeset+"/"+calendarName, summary, uid, startDateTime, endDateTime)
 
 	var buf strings.Builder
 	encoder := ical.NewEncoder(&buf)
@@ -87,18 +88,59 @@ func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, 
 }
 
 func ListEvents(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {
-	calendarURL := homeset + calendarName + "/"
-	calendar, err := client.GetCalendarObject(ctx, calendarURL)
+	fmt.Printf("Events:\n")
+	calendar, err := client.GetCalendarObject(ctx, calendarName)
 	FailOnError(err, "Error getting calendar object")
 	for _, event := range calendar.Data.Events() {
 		summary, err := event.Props.Text("SUMMARY")
 		FailOnError(err, "Error reading summary")
-		fmt.Printf("Event: %s\n", summary)
+		uid, err := event.Props.Text("UID")
+		FailOnError(err, "Error reading UID")
+		fmt.Printf("Event UID: %s, Summary: %s\n", uid, summary)
 	}
 
 }
-func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) {
-	// calendarURL := homeset + calendarName + "/"
-	// calendar, err := client.GetCalendarObject(ctx, calendarURL)
+
+func CreateEvent(ctx context.Context, client *caldav.Client, calendarPath string, summary string, uid string, startDateTime time.Time, endDateTime time.Time) {
+	event := ical.NewEvent()
+	event.Props.SetText(ical.PropUID, uid)
+	event.Props.SetText(ical.PropSummary, summary)
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
+	event.Props.SetDateTime(ical.PropDateTimeStart, startDateTime)
+	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
+
+	calendar, err := client.GetCalendarObject(ctx, calendarPath)
+	FailOnError(err, "Error getting calendar object")
+	calendar.Data.Component.Children = append(calendar.Data.Component.Children, event.Component)
+	var buf strings.Builder
+	encoder := ical.NewEncoder(&buf)
+	err = encoder.Encode(calendar.Data)
+	FailOnError(err, "Error encoding calendar")
+	_, err = client.PutCalendarObject(ctx, calendarPath, calendar.Data)
+	FailOnError(err, "Error putting calendar object")
 }
-func DeleteEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {}
+
+func DeleteEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, eventUID string) {
+	calendar, err := client.GetCalendarObject(ctx, calendarName)
+	FailOnError(err, "Error getting calendar object")
+	var updatedEvents []*ical.Component
+	for _, component := range calendar.Data.Component.Children {
+		if component.Name == ical.CompEvent {
+			uid, err := component.Props.Text(ical.PropUID)
+			FailOnError(err, "Error reading UID")
+			if uid == eventUID {
+				continue
+			}
+		}
+		updatedEvents = append(updatedEvents, component)
+	}
+	calendar.Data.Component.Children = updatedEvents
+
+	var buf strings.Builder
+	encoder := ical.NewEncoder(&buf)
+	err = encoder.Encode(calendar.Data)
+	FailOnError(err, "Error encoding calendar")
+
+	_, err = client.PutCalendarObject(ctx, calendarName, calendar.Data)
+	FailOnError(err, "Error putting calendar object")
+}
