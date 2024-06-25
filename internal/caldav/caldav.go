@@ -76,8 +76,9 @@ func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, 
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 
-	CreateEvent(ctx, client, homeset+"/"+calendarName, summary, uid, startDateTime, endDateTime)
+	event := GetEvent(summary, uid, startDateTime, endDateTime)
 
+	calendar.Children = append(calendar.Children, event.Component)
 	var buf strings.Builder
 	encoder := ical.NewEncoder(&buf)
 	err := encoder.Encode(calendar)
@@ -85,6 +86,21 @@ func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, 
 	calendarURL := homeset + calendarName + "/"
 	_, err = client.PutCalendarObject(ctx, calendarURL, calendar)
 	FailOnError(err, "Error putting calendar object")
+	fmt.Println("Calendar created")
+}
+
+func FindCalendar(ctx context.Context, client *caldav.Client, homeset string, calendarName string) error {
+	calendars, err := client.FindCalendars(ctx, homeset)
+	if err != nil {
+		return err
+	}
+
+	for _, calendar := range calendars {
+		if calendar.Name == calendarName {
+			return nil
+		}
+	}
+	return fmt.Errorf("calendar with name %s not found", calendarName)
 }
 
 func ListEvents(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {
@@ -96,27 +112,31 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset string, cale
 		FailOnError(err, "Error reading summary")
 		uid, err := event.Props.Text("UID")
 		FailOnError(err, "Error reading UID")
-		fmt.Printf("Event UID: %s, Summary: %s\n", uid, summary)
+		fmt.Printf("Summary: %s,\tUID: %s\n", summary, uid)
 	}
 
 }
 
-func CreateEvent(ctx context.Context, client *caldav.Client, calendarPath string, summary string, uid string, startDateTime time.Time, endDateTime time.Time) {
+func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime time.Time) *ical.Event {
 	event := ical.NewEvent()
 	event.Props.SetText(ical.PropUID, uid)
 	event.Props.SetText(ical.PropSummary, summary)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
 	event.Props.SetDateTime(ical.PropDateTimeStart, startDateTime)
 	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
+	fmt.Println("Event created with UID " + uid)
+	return event
+}
 
-	calendar, err := client.GetCalendarObject(ctx, calendarPath)
+func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) {
+	calendar, err := client.GetCalendarObject(ctx, calendarName)
 	FailOnError(err, "Error getting calendar object")
 	calendar.Data.Component.Children = append(calendar.Data.Component.Children, event.Component)
 	var buf strings.Builder
 	encoder := ical.NewEncoder(&buf)
 	err = encoder.Encode(calendar.Data)
 	FailOnError(err, "Error encoding calendar")
-	_, err = client.PutCalendarObject(ctx, calendarPath, calendar.Data)
+	_, err = client.PutCalendarObject(ctx, calendarName, calendar.Data)
 	FailOnError(err, "Error putting calendar object")
 }
 
@@ -134,13 +154,19 @@ func DeleteEvent(ctx context.Context, client *caldav.Client, homeset string, cal
 		}
 		updatedEvents = append(updatedEvents, component)
 	}
+	if len(updatedEvents) == 0 {
+		fmt.Println("Cannot delete the event as it would leave the calendar empty.") // add delete calendar call if implemented
+		return
+	}
+
 	calendar.Data.Component.Children = updatedEvents
 
 	var buf strings.Builder
 	encoder := ical.NewEncoder(&buf)
 	err = encoder.Encode(calendar.Data)
 	FailOnError(err, "Error encoding calendar")
-
 	_, err = client.PutCalendarObject(ctx, calendarName, calendar.Data)
 	FailOnError(err, "Error putting calendar object")
+
+	fmt.Println("Event deleted")
 }
