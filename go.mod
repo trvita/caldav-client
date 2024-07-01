@@ -1,8 +1,9 @@
-module caldav-client
+module github.com/trvita/caldav-client
 
 go 1.22.4
 
 require (
+	github.com/trvita/caldav-client v0.0.0-20240625160233-bc8d7c1ed4da
 	github.com/emersion/go-ical v0.0.0-20240127095438-fc1c9d8fb2b6
 	github.com/emersion/go-webdav v0.5.0
 	github.com/google/uuid v1.6.0
