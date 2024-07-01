@@ -9,7 +9,7 @@ import (
 
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/google/uuid"
-	mycal "github.com/trvita/caldav-client/internal/caldav"
+	mycal "github.com/trvita/caldav-client/caldav"
 )
 
 func FailOnError(err error, msg string) {
