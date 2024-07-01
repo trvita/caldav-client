@@ -79,12 +79,8 @@ func CreateCalendar(ctx context.Context, client *caldav.Client, homeset string, 
 	event := GetEvent(summary, uid, startDateTime, endDateTime)
 
 	calendar.Children = append(calendar.Children, event.Component)
-	var buf strings.Builder
-	encoder := ical.NewEncoder(&buf)
-	err := encoder.Encode(calendar)
-	FailOnError(err, "error encoding calendar")
 	calendarURL := homeset + calendarName + "/"
-	_, err = client.PutCalendarObject(ctx, calendarURL, calendar)
+	_, err := client.PutCalendarObject(ctx, calendarURL, calendar)
 	FailOnError(err, "Error putting calendar object")
 	fmt.Println("Calendar created")
 }
