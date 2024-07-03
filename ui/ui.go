@@ -128,7 +128,6 @@ func StartMenu(url string) {
 			err = CalendarMenu(httpClient, client, principal, ctx)
 			if err != nil {
 				RedLine(err)
-				return
 			}
 		case 0:
 			BlueLine("Shutting down...\n")
@@ -180,7 +179,6 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				break
 			}
 			BlueLine("Calendar " + calendarName + " deleted\n")
-
 		case 0:
 			BlueLine("Logging out...\n")
 			return nil
@@ -213,6 +211,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
 			if err != nil {
 				RedLine(err)
+				break
 			}
 			BlueLine("Event " + event.Name + " created\n")
 		case 3:
@@ -220,6 +219,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {
 				RedLine(err)
+				break
 			}
 			BlueLine("Event " + eventUID + " deleted\n")
 		case 0:
