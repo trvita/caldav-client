@@ -53,16 +53,16 @@ func GetUsernameBaikal(homeset string) string {
 	return username
 }
 
-func GetEvent() (string, string, time.Time, time.Time, []string, error) {
-	var summary, startDate, startTime, endDate, endTime string
-	var startDateTime, endDateTime time.Time
-	var attendees []string
-	var err error
-	summary = GetString("Enter event summary: ")
+func GetEvent() (string, string, time.Time, time.Time, []string, string, error) {
 	uid, err := uuid.NewUUID()
 	if err != nil {
-		return "", "", time.Time{}, time.Time{}, nil, err
+		return "", "", time.Time{}, time.Time{}, nil, "", err
 	}
+	var summary, startDate, startTime, endDate, endTime, organizer string
+	var startDateTime, endDateTime time.Time
+	var attendees []string
+
+	summary = GetString("Enter event summary: ")
 	for {
 		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
 		startTime = GetString("Enter event start time (HH.MM.SS): ")
@@ -92,7 +92,10 @@ func GetEvent() (string, string, time.Time, time.Time, []string, error) {
 		}
 		attendees = append(attendees, attendee)
 	}
-	return summary, uid.String(), startDateTime, endDateTime, attendees, nil
+	if attendees != nil {
+		organizer = GetString("Enter organizer email: ")
+	}
+	return summary, uid.String(), startDateTime, endDateTime, attendees, organizer, nil
 }
 
 func StartMenu(url string) {
@@ -139,34 +142,7 @@ func StartMenu(url string) {
 func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context) error {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar homeset")
-	BlueLine("Current user: " + GetUsernameBaikal(homeset) + "\n")
-	err = mycal.ListEvents(ctx, client, homeset, "inbox")
-	if err != nil {
-		return err
-	}
-	// example starts
-	// files, err := client.ReadDir(ctx, homeset, false)
-	// if err != nil {
-	// 	return err
-	// }
-	// var file webdav.FileInfo
-	// for _, file = range files {
-	// 	if file.Path == "/dav.php/calendars/ya/inbox/" {
-	// 		break
-	// 	}
-	// }
-	// r, err := client.Open(ctx, file.Path)
-	// if err != nil {
-	// 	return err
-	// }
-	// bytes, err := io.ReadAll(r)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println(string(bytes))
-
-	// example ends
+	fmt.Printf("%s\n", homeset)
 	for {
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")
@@ -235,12 +211,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				RedLine(err)
 			}
 		case 2:
-			summary, uid, startDateTime, endDateTime, attendees, err := GetEvent()
+			summary, uid, startDateTime, endDateTime, attendees, organizer, err := GetEvent()
 			if err != nil {
 				RedLine(err)
 				break
 			}
-			event := mycal.GetEvent(summary, uid, startDateTime, endDateTime, attendees)
+			event := mycal.GetEvent(summary, uid, startDateTime, endDateTime, attendees, organizer)
 			err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
 			if err != nil {
 				RedLine(err)

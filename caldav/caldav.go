@@ -17,6 +17,14 @@ import (
 	"golang.org/x/term"
 )
 
+func ExtractNameFromEmail(email string) string {
+	emailParts := strings.Split(email, "@")
+	if len(emailParts) != 2 {
+		return ""
+	}
+	return emailParts[0]
+}
+
 func GetCredentials(r io.Reader) (string, string, error) {
 	reader := bufio.NewReader(r)
 	fmt.Print("username: ")
@@ -88,7 +96,7 @@ func CreateCalendar(ctx context.Context, httpClient webdav.HTTPClient, url, home
 				</D:prop>
 			</D:set>
 		</C:mkcalendar>`, calendarName, description)
-	calURL := url + homeset + calendarName
+	calURL := url + homeset[8:] + calendarName
 	req, err := http.NewRequest("MKCALENDAR", calURL, bytes.NewBufferString(reqBody))
 	if err != nil {
 		return err
@@ -161,7 +169,7 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	return nil
 }
 
-func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime time.Time, attendees []string) *ical.Event {
+func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime time.Time, attendees []string, organizer string) *ical.Event {
 	event := ical.NewEvent()
 	event.Props.SetText(ical.PropUID, uid)
 	event.Props.SetText(ical.PropSummary, summary)
@@ -170,9 +178,15 @@ func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime t
 	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
 	for _, attendee := range attendees {
 		prop := ical.NewProp(ical.PropAttendee)
-		prop.Value = "mailto:"+attendee
+		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
+		prop.Params.Add(ical.ParamCommonName, ExtractNameFromEmail(attendee))
+		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+		prop.Value = "mailto:" + attendee
 		event.Props.Add(prop)
 	}
+	propOrg := ical.NewProp(ical.PropOrganizer)
+	propOrg.Value = "mailto:" + organizer
+	event.Props.Add(propOrg)
 
 	return event
 }
