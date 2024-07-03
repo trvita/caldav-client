@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
-	ui.StartMenu("http://localhost:5232")
+	//ui.StartMenu("http://127.0.0.1:5232")       //radicale
+	ui.StartMenu("http://127.0.0.1:90/dav.php") // baikal
 }
