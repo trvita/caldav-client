@@ -140,11 +140,39 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar homeset")
 	BlueLine("Current user: " + GetUsernameBaikal(homeset) + "\n")
+	err = mycal.ListEvents(ctx, client, homeset, "inbox")
+	if err != nil {
+		return err
+	}
+	// example starts
+	// files, err := client.ReadDir(ctx, homeset, false)
+	// if err != nil {
+	// 	return err
+	// }
+	// var file webdav.FileInfo
+	// for _, file = range files {
+	// 	if file.Path == "/dav.php/calendars/ya/inbox/" {
+	// 		break
+	// 	}
+	// }
+	// r, err := client.Open(ctx, file.Path)
+	// if err != nil {
+	// 	return err
+	// }
+	// bytes, err := io.ReadAll(r)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// fmt.Println(string(bytes))
+
+	// example ends
 	for {
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")
 		fmt.Println("3. Create calendar")
-		fmt.Println("4. Delete calendar")
+		fmt.Println("4. Check inbox")
+		fmt.Println("5. Delete calendar")
 		fmt.Println("0. Log out")
 		var answer int
 		fmt.Scan(&answer)
@@ -172,6 +200,11 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 			}
 			BlueLine("Calendar " + calendarName + " created\n")
 		case 4:
+			err := mycal.ListEvents(ctx, client, homeset, "inbox")
+			if err != nil {
+				RedLine(err)
+			}
+		case 5:
 			calendarName := GetString("Enter calendar name to delete: ")
 			err := mycal.Delete(ctx, client, homeset+calendarName)
 			if err != nil {
