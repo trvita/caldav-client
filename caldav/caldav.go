@@ -47,7 +47,7 @@ func GetCredentials(r io.Reader) (string, string, error) {
 
 func CreateClient(url string, r io.Reader) (webdav.HTTPClient, *caldav.Client, string, context.Context, error) {
 	username, password, err := GetCredentials(r)
-	
+
 	if err != nil {
 		return nil, nil, "", nil, err
 	}
@@ -150,11 +150,6 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	fmt.Printf("%s:\n\n", strings.ToUpper(calendarName))
 	for _, calendarObject := range resp {
 		for _, event := range calendarObject.Data.Events() {
-			att, err := event.Props.Text("ATTENDEE")
-			if err != nil {
-				return err
-			}
-			fmt.Printf("%s\n", att)
 			for _, prop := range event.Props {
 				for _, p := range prop {
 					fmt.Printf("%s: %s\n", p.Name, p.Value)
@@ -174,8 +169,11 @@ func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime t
 	event.Props.SetDateTime(ical.PropDateTimeStart, startDateTime)
 	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
 	for _, attendee := range attendees {
-		event.Props.SetText(ical.PropAttendee, "mailto:"+attendee)
+		prop := ical.NewProp(ical.PropAttendee)
+		prop.Value = "mailto:"+attendee
+		event.Props.Add(prop)
 	}
+
 	return event
 }
 
