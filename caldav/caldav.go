@@ -180,15 +180,15 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	return nil
 }
 
-func GetEvent(Event) *ical.Event {
+func GetEvent(newEvent Event) *ical.Event {
 	event := ical.NewEvent()
-	event.Name = Event.name
-	event.Props.SetText(ical.PropUID, Event.uid)
-	event.Props.SetText(ical.PropSummary, Event.summary)
+	event.Name = newEvent.name
+	event.Props.SetText(ical.PropUID, newEvent.uid)
+	event.Props.SetText(ical.PropSummary, newEvent.summary)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	event.Props.SetDateTime(ical.PropDateTimeStart, Event.dateTimeStart)
-	event.Props.SetDateTime(ical.PropDateTimeEnd, Event.dateTimeEnd)
-	for _, attendee := range Event.attendees {
+	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.dateTimeStart)
+	event.Props.SetDateTime(ical.PropDateTimeEnd, newEvent.dateTimeEnd)
+	for _, attendee := range newEvent.attendees {
 		prop := ical.NewProp(ical.PropAttendee)
 		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
 		// prop.Params.Add(ical.ParamCommonName, ExtractNameFromEmail(attendee))
@@ -197,7 +197,7 @@ func GetEvent(Event) *ical.Event {
 		event.Props.Add(prop)
 	}
 	propOrg := ical.NewProp(ical.PropOrganizer)
-	propOrg.Value = "mailto:" + Event.organizer
+	propOrg.Value = "mailto:" + newEvent.organizer
 	event.Props.Add(propOrg)
 
 	return event

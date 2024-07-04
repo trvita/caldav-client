@@ -110,14 +110,15 @@ func GetEvent() (*mycal.Event, error) {
 		organizer = GetString("Enter organizer email: ")
 	}
 	return &mycal.Event{
-		Name:          name,
-		Uid:           uid.String(),
-		Summary:       GetString("Enter event summary: "),
-		DateTimeStart: startDateTime,
-		DateTimeEnd:   endDateTime,
-		Reccurent:     rec,
-		Attendees:     attendees,
-		Organizer:     organizer}, nil
+		name:          name,
+		uid:           uid.String(),
+		summary:       GetString("Enter event summary: "),
+		dateTimeStart: startDateTime,
+		dateTimeEnd:   endDateTime,
+		reccurent:     rec,
+		attendees:     attendees,
+		organizer:     organizer,
+	}, nil
 }
 
 func StartMenu(url string) {
