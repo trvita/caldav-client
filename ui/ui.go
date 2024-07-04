@@ -94,7 +94,7 @@ func GetEvent() (*mycal.Event, error) {
 		}
 		break
 	}
-	recString := GetString("Reccurency [y/any other symbol]: ")
+	recString := GetString("Recurency [y/any other symbol]: ")
 	rec := false
 	if recString == "y" {
 		rec = true
@@ -110,14 +110,14 @@ func GetEvent() (*mycal.Event, error) {
 		organizer = GetString("Enter organizer email: ")
 	}
 	return &mycal.Event{
-		name:          name,
-		uid:           uid.String(),
-		summary:       GetString("Enter event summary: "),
-		dateTimeStart: startDateTime,
-		dateTimeEnd:   endDateTime,
-		reccurent:     rec,
-		attendees:     attendees,
-		organizer:     organizer,
+		Name:          name,
+		Uid:           uid.String(),
+		Summary:       GetString("Enter event summary: "),
+		DateTimeStart: startDateTime,
+		DateTimeEnd:   endDateTime,
+		Recurrent:     rec,
+		Attendees:     attendees,
+		Organizer:     organizer,
 	}, nil
 }
 
@@ -238,12 +238,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			}
 			// create event
 		case 2:
-			summary, uid, startDateTime, endDateTime, attendees, organizer, err := GetEvent()
+			newEvent, err := GetEvent()
 			if err != nil {
 				RedLine(err)
 				break
 			}
-			event := mycal.GetEvent(summary, uid, startDateTime, endDateTime, attendees, organizer)
+			event := mycal.GetEvent(newEvent)
 			err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
 			if err != nil {
 				RedLine(err)
