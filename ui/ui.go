@@ -165,7 +165,6 @@ func StartMenu(url string) {
 func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context) error {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	FailOnError(err, "Error finding calendar homeset")
-	fmt.Printf("%s\n", homeset)
 	for {
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")
@@ -223,46 +222,56 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 	for {
 		fmt.Println("1. List events")
 		fmt.Println("2. Create event")
-		fmt.Println("3. Create todo")
-		fmt.Println("4. Create reccuring event")
-		fmt.Println("5. Delete event")
+		fmt.Println("3. Delete event")
 		fmt.Println("0. Back to calendar menu")
 		var answer int
 		fmt.Scan(&answer)
 		switch answer {
 		// list events
 		case 1:
+			BlueLine(calendarName + " EVENTS:\n")
 			err := mycal.ListEvents(ctx, client, homeset, calendarName)
 			if err != nil {
 				RedLine(err)
 			}
-			// create event
+			BlueLine(calendarName + " TODOS:\n")
+			err = mycal.ListTodos(ctx, client, homeset, calendarName)
+			if err != nil {
+				RedLine(err)
+			}
+			// create event or todo
 		case 2:
 			newEvent, err := GetEvent()
 			if err != nil {
 				RedLine(err)
 				break
 			}
-			event := mycal.GetEvent(newEvent)
-			err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
-			if err != nil {
-				RedLine(err)
-				break
+			switch newEvent.Name {
+			case "VTODO":
+				todo := mycal.GetTodo(newEvent)
+				err = mycal.CreateEvent(ctx, client, homeset, calendarName, todo)
+				if err != nil {
+					RedLine(err)
+					break
+				}
+				BlueLine("Todo created\n")
+			case "VEVENT":
+				event := mycal.GetEvent(newEvent)
+				err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
+				if err != nil {
+					RedLine(err)
+					break
+				}
+				BlueLine("Event created\n")
 			}
-			BlueLine("Event " + event.Name + " created\n")
-		// create todo
 		case 3:
-		// create reccuring event
-		case 4:
-		// delete event
-		case 5:
 			eventUID := GetString("Enter event UID: ")
 			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {
 				RedLine(err)
 				break
 			}
-			BlueLine("Event " + eventUID + " deleted\n")
+			BlueLine("Event deleted\n")
 		// go back
 		case 0:
 			BlueLine("Returning to calendar menu...\n")

@@ -144,11 +144,7 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 			Name:     "VCALENDAR",
 			AllProps: true,
 			Comps: []caldav.CalendarCompRequest{{
-				Name: "VEVENT",
-				Props: []string{
-					ical.PropSummary,
-					ical.PropAttendee,
-				},
+				Name:     "VEVENT",
 				AllProps: true,
 			}},
 		},
@@ -165,10 +161,50 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	if err != nil {
 		return fmt.Errorf("error getting calendar query: %v", err)
 	}
+	if len(resp) == 0 {
+		return fmt.Errorf("no events found")
+	}
 	// maybe return props and not use print in caldav.go
-	fmt.Printf("%s:\n\n", strings.ToUpper(calendarName))
 	for _, calendarObject := range resp {
-		for _, event := range calendarObject.Data.Events() {
+		for _, event := range calendarObject.Data.Children {
+			for _, prop := range event.Props {
+				for _, p := range prop {
+					fmt.Printf("%s: %s\n", p.Name, p.Value)
+				}
+			}
+			fmt.Println()
+		}
+	}
+	return nil
+}
+
+func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName string) error {
+	query := &caldav.CalendarQuery{
+		CompRequest: caldav.CalendarCompRequest{
+			Name: "VCALENDAR",
+			Comps: []caldav.CalendarCompRequest{{
+				Name: "VTODO",
+			}},
+		},
+		CompFilter: caldav.CompFilter{
+			Name: "VCALENDAR",
+			Comps: []caldav.CompFilter{{
+				Name: "VTODO",
+			}},
+		},
+	}
+
+	calendarURL := homeset + calendarName
+	resp, err := client.QueryCalendar(ctx, calendarURL, query)
+	if err != nil {
+		return fmt.Errorf("error getting calendar query: %v", err)
+	}
+	if len(resp) == 0 {
+		return fmt.Errorf("no todos found")
+	}
+	// maybe return props and not use print in caldav.go
+	for _, calendarObject := range resp {
+		for _, event := range calendarObject.Data.Children {
 			for _, prop := range event.Props {
 				for _, p := range prop {
 					fmt.Printf("%s: %s\n", p.Name, p.Value)
@@ -191,22 +227,29 @@ func GetEvent(newEvent *Event) *ical.Event {
 	for _, attendee := range newEvent.Attendees {
 		prop := ical.NewProp(ical.PropAttendee)
 		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
-		// prop.Params.Add(ical.ParamCommonName, ExtractNameFromEmail(attendee))
 		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
 		prop.Value = "mailto:" + attendee
 		event.Props.Add(prop)
 	}
-	propOrg := ical.NewProp(ical.PropOrganizer)
-	propOrg.Value = "mailto:" + newEvent.Organizer
-	event.Props.Add(propOrg)
+	if newEvent.Attendees != nil {
+		propOrg := ical.NewProp(ical.PropOrganizer)
+		propOrg.Value = "mailto:" + newEvent.Organizer
+		event.Props.Add(propOrg)
+	}
 	return event
 }
 
-func GetTodo() error {
-	todo := ical.NewEvent()
-	todo.Name = ical.CompToDo
-
-	return nil
+func GetTodo(newEvent *Event) *ical.Event {
+	event := ical.NewEvent()
+	event.Name = newEvent.Name
+	event.Props.SetText(ical.PropUID, newEvent.Uid)
+	event.Props.SetText(ical.PropSummary, newEvent.Summary)
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
+	event.Props.SetDateTime(ical.PropLastModified, time.Now().UTC()) // maybe server puts it
+	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.DateTimeStart)
+	event.Props.SetDateTime(ical.PropDue, newEvent.DateTimeEnd)
+	event.Props.SetText(ical.PropStatus, "NEEDS-ACTION")
+	return event
 }
 
 func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) error {
