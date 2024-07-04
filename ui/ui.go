@@ -53,16 +53,25 @@ func GetUsernameBaikal(homeset string) string {
 	return username
 }
 
-func GetEvent() (string, string, time.Time, time.Time, []string, string, error) {
+func GetEvent() (*mycal.Event, error) {
+	var attendees []string
+	var organizer, name, startDate, startTime, endDate, endTime string
+	var startDateTime, endDateTime time.Time
 	uid, err := uuid.NewUUID()
 	if err != nil {
-		return "", "", time.Time{}, time.Time{}, nil, "", err
+		return nil, err
 	}
-	var summary, startDate, startTime, endDate, endTime, organizer string
-	var startDateTime, endDateTime time.Time
-	var attendees []string
-
-	summary = GetString("Enter event summary: ")
+	for {
+		name = GetString("Enter event type [event, todo]: ")
+		if strings.ToUpper(name) == "EVENT" {
+			name = "VEVENT"
+			break
+		}
+		if strings.ToUpper(name) == "TODO" {
+			name = "VTODO"
+			break
+		}
+	}
 	for {
 		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
 		startTime = GetString("Enter event start time (HH.MM.SS): ")
@@ -85,6 +94,11 @@ func GetEvent() (string, string, time.Time, time.Time, []string, string, error) 
 		}
 		break
 	}
+	recString := GetString("Reccurency [y/any other symbol]: ")
+	rec := false
+	if recString == "y" {
+		rec = true
+	}
 	for {
 		attendee := GetString("Enter attendee email (or 0 to finish): ")
 		if attendee == "0" {
@@ -95,7 +109,15 @@ func GetEvent() (string, string, time.Time, time.Time, []string, string, error) 
 	if attendees != nil {
 		organizer = GetString("Enter organizer email: ")
 	}
-	return summary, uid.String(), startDateTime, endDateTime, attendees, organizer, nil
+	return &mycal.Event{
+		Name:          name,
+		Uid:           uid.String(),
+		Summary:       GetString("Enter event summary: "),
+		DateTimeStart: startDateTime,
+		DateTimeEnd:   endDateTime,
+		Reccurent:     rec,
+		Attendees:     attendees,
+		Organizer:     organizer}, nil
 }
 
 func StartMenu(url string) {
@@ -200,16 +222,20 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 	for {
 		fmt.Println("1. List events")
 		fmt.Println("2. Create event")
-		fmt.Println("3. Delete event")
+		fmt.Println("3. Create todo")
+		fmt.Println("4. Create reccuring event")
+		fmt.Println("5. Delete event")
 		fmt.Println("0. Back to calendar menu")
 		var answer int
 		fmt.Scan(&answer)
 		switch answer {
+		// list events
 		case 1:
 			err := mycal.ListEvents(ctx, client, homeset, calendarName)
 			if err != nil {
 				RedLine(err)
 			}
+			// create event
 		case 2:
 			summary, uid, startDateTime, endDateTime, attendees, organizer, err := GetEvent()
 			if err != nil {
@@ -223,7 +249,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				break
 			}
 			BlueLine("Event " + event.Name + " created\n")
+		// create todo
 		case 3:
+		// create reccuring event
+		case 4:
+		// delete event
+		case 5:
 			eventUID := GetString("Enter event UID: ")
 			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {
@@ -231,6 +262,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				break
 			}
 			BlueLine("Event " + eventUID + " deleted\n")
+		// go back
 		case 0:
 			BlueLine("Returning to calendar menu...\n")
 			return

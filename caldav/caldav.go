@@ -17,6 +17,17 @@ import (
 	"golang.org/x/term"
 )
 
+type Event struct {
+	name          string
+	summary       string
+	uid           string
+	dateTimeStart time.Time
+	dateTimeEnd   time.Time
+	reccurent     bool
+	attendees     []string
+	organizer     string
+}
+
 func ExtractNameFromEmail(email string) string {
 	emailParts := strings.Split(email, "@")
 	if len(emailParts) != 2 {
@@ -169,26 +180,34 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	return nil
 }
 
-func GetEvent(summary string, uid string, startDateTime time.Time, endDateTime time.Time, attendees []string, organizer string) *ical.Event {
+func GetEvent(Event) *ical.Event {
 	event := ical.NewEvent()
-	event.Props.SetText(ical.PropUID, uid)
-	event.Props.SetText(ical.PropSummary, summary)
+	event.Name = Event.name
+	event.Props.SetText(ical.PropUID, Event.uid)
+	event.Props.SetText(ical.PropSummary, Event.summary)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	event.Props.SetDateTime(ical.PropDateTimeStart, startDateTime)
-	event.Props.SetDateTime(ical.PropDateTimeEnd, endDateTime)
-	for _, attendee := range attendees {
+	event.Props.SetDateTime(ical.PropDateTimeStart, Event.dateTimeStart)
+	event.Props.SetDateTime(ical.PropDateTimeEnd, Event.dateTimeEnd)
+	for _, attendee := range Event.attendees {
 		prop := ical.NewProp(ical.PropAttendee)
 		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
-		prop.Params.Add(ical.ParamCommonName, ExtractNameFromEmail(attendee))
+		// prop.Params.Add(ical.ParamCommonName, ExtractNameFromEmail(attendee))
 		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
 		prop.Value = "mailto:" + attendee
 		event.Props.Add(prop)
 	}
 	propOrg := ical.NewProp(ical.PropOrganizer)
-	propOrg.Value = "mailto:" + organizer
+	propOrg.Value = "mailto:" + Event.organizer
 	event.Props.Add(propOrg)
 
 	return event
+}
+
+func GetTodo() error {
+	todo := ical.NewEvent()
+	todo.Name = ical.CompToDo
+
+	return nil
 }
 
 func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) error {
