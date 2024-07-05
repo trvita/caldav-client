@@ -324,6 +324,35 @@ func StartMenu(url string) {
 func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context) error {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	if err != nil {
+		RedLine(err)
+		return err
+	}
+	var startDateTime, endDateTime time.Time
+	for {
+		startDate := GetString("Enter date to find from (YYYY.MM.DD): ")
+		startTime := GetString("Enter time to find from (HH.MM.SS): ")
+
+		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
+		if err != nil {
+			fmt.Println("invalid start date/time format")
+			continue
+		}
+		break
+	}
+	for {
+		endDate := GetString("Enter event end date (YYYY.MM.DD): ")
+		endTime := GetString("Enter event end time (HH.MM.SS): ")
+
+		endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
+		if err != nil {
+			fmt.Println("invalid end date/time format")
+			continue
+		}
+		break
+	}
+	err = mycal.FindEventsWithExpand(ctx, httpClient, URL, homeset, GetString("Enter calendar name to list events: "), startDateTime, endDateTime)
+	if err != nil {
+		RedLine(err)
 		return err
 	}
 	for {
@@ -384,7 +413,8 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 		fmt.Println("1. List events")
 		fmt.Println("2. Create event")
 		fmt.Println("3. Create recurrent event")
-		fmt.Println("4. Delete event")
+		fmt.Println("4. Find events by time range")
+		fmt.Println("5. Delete event")
 		fmt.Println("0. Back to calendar menu")
 		var answer int
 		fmt.Scan(&answer)
@@ -439,32 +469,36 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				break
 			}
 			BlueLine("Recurrent event created\n")
+		case 4:
+			// var startDateTime, endDateTime time.Time
+			// var err error
+			// for {
+			// 	startDate := GetString("Enter date to find from (YYYY.MM.DD): ")
+			// 	startTime := GetString("Enter time to find from (HH.MM.SS): ")
 
-			// newEvent, err := GetEvent()
-			// if err != nil {
-			// 	RedLine(err)
+			// 	startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
+			// 	if err != nil {
+			// 		fmt.Println("invalid start date/time format")
+			// 		continue
+			// 	}
 			// 	break
 			// }
-			// switch newEvent.Name {
-			// case "VTODO":
-			// 	todo := mycal.GetTodo(newEvent)
-			// 	err = mycal.CreateEvent(ctx, client, homeset, calendarName, todo)
-			// 	if err != nil {
-			// 		RedLine(err)
-			// 		break
-			// 	}
-			// 	BlueLine("Todo created\n")
-			// case "VEVENT":
-			// 	event := mycal.GetEvent(newEvent)
-			// 	err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
-			// 	if err != nil {
-			// 		RedLine(err)
-			// 		break
-			// 	}
-			// 	BlueLine("Event created\n")
-			// }
+			// for {
+			// 	endDate := GetString("Enter event end date (YYYY.MM.DD): ")
+			// 	endTime := GetString("Enter event end time (HH.MM.SS): ")
 
-		case 4:
+			// 	endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
+			// 	if err != nil {
+			// 		fmt.Println("invalid end date/time format")
+			// 		continue
+			// 	}
+			// 	break
+			// }
+			// err = mycal.FindEvents(ctx, client, homeset, calendarName, startDateTime, endDateTime)
+			// if err != nil {
+			// 	RedLine(err)
+			// }
+		case 5:
 			eventUID := GetString("Enter event UID: ")
 			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {

@@ -7,8 +7,8 @@ require (
 	github.com/emersion/go-webdav v0.5.0
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/term v0.21.0
 	github.com/teambition/rrule-go v1.8.2
+	golang.org/x/term v0.21.0
 )
 
 require (
