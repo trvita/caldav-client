@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -189,6 +190,44 @@ func TestListTodosWrong(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = ListEvents(ctx, client, homeset, emptyCalendarName)
+	assert.Error(t, err)
+}
+
+func TestCreateEvent(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	e := &Event{
+		Name:          "VEVENT",
+		Summary:       "event",
+		Uid:           validUID,
+		DateTimeStart: time.Now(),
+		DateTimeEnd:   time.Now(),
+		Attendees:     nil,
+		Organizer:     "",
+	}
+	event := GetEvent(e)
+	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
+	assert.NoError(t, err)
+}
+
+func TestCreateEventWrong(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	e := &Event{}
+	event := GetEvent(e)
+	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
 	assert.Error(t, err)
 }
 
