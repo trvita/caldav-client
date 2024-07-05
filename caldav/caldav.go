@@ -23,7 +23,6 @@ type Event struct {
 	Uid           string
 	DateTimeStart time.Time
 	DateTimeEnd   time.Time
-	Recurrent     bool
 	Attendees     []string
 	Organizer     string
 }

@@ -16,6 +16,7 @@ import (
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
+var URLstart = "/dav.php/calendars/"
 
 func FailOnError(err error, msg string) {
 	if err != nil {
@@ -37,6 +38,7 @@ func GetString(message string) string {
 	fmt.Scan(&str)
 	return str
 }
+
 func GetStrings(message string) string {
 	fmt.Print(message)
 	reader := bufio.NewReader(os.Stdin)
@@ -44,8 +46,15 @@ func GetStrings(message string) string {
 	return strings.TrimSpace(str)
 }
 
+func GetInt(message string) int {
+	var num int
+	fmt.Print(message)
+	fmt.Scan(&num)
+	return num
+}
+
 func GetUsernameBaikal(homeset string) string {
-	startMarker := "/dav.php/calendars/"
+	startMarker := URLstart
 	startPos := strings.Index(homeset, startMarker)
 	startPos += len(startMarker)
 	username := homeset[startPos:(len(homeset) - 1)]
@@ -94,11 +103,6 @@ func GetEvent() (*mycal.Event, error) {
 		}
 		break
 	}
-	recString := GetString("Recurency [y/any other symbol]: ")
-	rec := false
-	if recString == "y" {
-		rec = true
-	}
 	for {
 		attendee := GetString("Enter attendee email (or 0 to finish): ")
 		if attendee == "0" {
@@ -115,10 +119,69 @@ func GetEvent() (*mycal.Event, error) {
 		Summary:       GetString("Enter event summary: "),
 		DateTimeStart: startDateTime,
 		DateTimeEnd:   endDateTime,
-		Recurrent:     rec,
 		Attendees:     attendees,
 		Organizer:     organizer,
 	}, nil
+}
+
+func GetRecurrentEvent() (string, string, time.Time, string, int, int, int, error) {
+	var startDate, startTime, name, uid, freq string
+	var startDateTime time.Time
+	var num, interval, count, until, ans int
+
+	name = "VEVENT"
+	uuid, err := uuid.NewUUID()
+	if err != nil {
+		return "", "", time.Time{}, "", 0, 0, 0, err
+	}
+	uid = uuid.String()
+	for {
+		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
+		startTime = GetString("Enter event start time (HH.MM.SS): ")
+
+		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
+		if err != nil {
+			fmt.Println("invalid start date/time format")
+			continue
+		}
+		break
+	}
+	fmt.Print("Enter number of recurrency rules: ")
+	fmt.Scan(&num)
+	for num > 0 {
+		cont := true
+		for cont {
+			freq = GetString("Enter frequency [Y, MO, D, H, MI]: ")
+			switch strings.ToUpper(freq) {
+			case "Y":
+				freq = "YEARLY"
+				cont = false
+			case "MO":
+				freq = "MONTHLY"
+				cont = false
+			case "D":
+				freq = "DAILY"
+				cont = false
+			case "H":
+				freq = "HOURLY"
+				cont = false
+			case "MI":
+				freq = "MINUTELY"
+				cont = false
+			}
+		}
+		interval = GetInt("Enter interval or 0 to skip: ")
+		ans = GetInt("Count, until or skip? [1/2/0]: ")
+		switch ans {
+		case 1:
+			count = GetInt("Enter count: ")
+
+		case 2:
+			until = GetInt("Enter until: ")
+		}
+		num--
+	}
+	return name, uid, startDateTime, freq, interval, count, until, nil
 }
 
 func StartMenu(url string) {
