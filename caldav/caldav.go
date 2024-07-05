@@ -14,6 +14,7 @@ import (
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
+	"github.com/teambition/rrule-go"
 	"golang.org/x/term"
 )
 
@@ -23,6 +24,26 @@ type Event struct {
 	Uid           string
 	DateTimeStart time.Time
 	DateTimeEnd   time.Time
+	Attendees     []string
+	Organizer     string
+}
+
+type ReccurentEvent struct {
+	Name          string
+	Summary       string
+	Uid           string
+	DateTimeStart time.Time
+	DateTimeUntil time.Time
+	Frequency     int
+	Count         int
+	Interval      int
+	ByDay         []int
+	ByMonthDay    []int
+	ByYearDay     []int
+	ByMonth       []int
+	ByWeekNo      []int
+	ByHour        []int
+	BySetPos      []int
 	Attendees     []string
 	Organizer     string
 }
@@ -251,11 +272,63 @@ func GetTodo(newEvent *Event) *ical.Event {
 	return event
 }
 
+func GetRecurrentEvent(newRecEvent *ReccurentEvent) *ical.Event {
+	event := ical.NewEvent()
+	event.Name = newRecEvent.Name
+	event.Props.SetText(ical.PropUID, newRecEvent.Uid)
+	event.Props.SetText(ical.PropSummary, newRecEvent.Summary)
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
+	event.Props.SetDateTime(ical.PropDateTimeStart, newRecEvent.DateTimeStart)
+
+	event.Props.SetRecurrenceRule(&rrule.ROption{
+		Freq: rrule.Frequency(newRecEvent.Frequency),
+		//Dtstart:    newRecEvent.DateTimeStart,
+		Interval:   newRecEvent.Interval,
+		Wkst:       rrule.MO,
+		Count:      newRecEvent.Count,
+		Until:      newRecEvent.DateTimeUntil,
+		Bysetpos:   newRecEvent.BySetPos,
+		Bymonth:    newRecEvent.ByMonth,
+		Bymonthday: newRecEvent.ByMonthDay,
+		Byyearday:  newRecEvent.ByYearDay,
+		Byweekno:   newRecEvent.ByWeekNo,
+		Byweekday:  []rrule.Weekday{},
+		Byhour:     newRecEvent.ByHour,
+		Byminute:   []int{},
+		Bysecond:   []int{},
+		Byeaster:   []int{},
+	})
+
+	for _, attendee := range newRecEvent.Attendees {
+		prop := ical.NewProp(ical.PropAttendee)
+		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
+		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+		prop.Value = "mailto:" + attendee
+		event.Props.Add(prop)
+	}
+	if newRecEvent.Attendees != nil {
+		propOrg := ical.NewProp(ical.PropOrganizer)
+		propOrg.Value = "mailto:" + newRecEvent.Organizer
+		event.Props.Add(propOrg)
+	}
+	return event
+}
+
 func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) error {
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+
+	timezone := ical.NewComponent(ical.CompTimezone)
+	timezone.Props.SetText(ical.ParamTimezoneID, "Asia/Krasnoyarsk")
+
+	standard := ical.NewComponent(ical.CompTimezoneStandard)
+	standard.Props.SetDateTime(ical.PropDateTimeStart, time.Date(1970, 01, 01, 0, 0, 0, 0, time.Now().Location()))
+	standard.Props.SetText(ical.PropTimezoneOffsetFrom, "+0700")
+	standard.Props.SetText(ical.PropTimezoneOffsetTo, "+0700")
+	timezone.Children = append(timezone.Children, standard)
+	calendar.Children = append(calendar.Children, timezone)
 
 	calendar.Children = append(calendar.Children, event.Component)
 	eventUID, err := event.Props.Text(ical.PropUID)

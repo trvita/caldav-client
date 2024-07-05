@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +53,32 @@ func GetInt(message string) int {
 	fmt.Scan(&num)
 	return num
 }
+func GetInts(message string) ([]int, error) {
+	fmt.Print(message)
+	reader := bufio.NewReader(os.Stdin)
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	str = strings.TrimSpace(str)
+	if str == "" {
+		return nil, nil
+	}
+	numbersStr := strings.Split(str, ",")
+	var numbersInt []int
+
+	for _, numStr := range numbersStr {
+		numStr = strings.TrimSpace(numStr)
+		numInt, err := strconv.Atoi(numStr)
+		if err != nil {
+			return nil, err
+		}
+		numbersInt = append(numbersInt, numInt)
+	}
+
+	return numbersInt, nil
+}
 
 func GetUsernameBaikal(homeset string) string {
 	startMarker := URLstart
@@ -64,12 +91,13 @@ func GetUsernameBaikal(homeset string) string {
 
 func GetEvent() (*mycal.Event, error) {
 	var attendees []string
-	var organizer, name, startDate, startTime, endDate, endTime string
+	var summary, organizer, name, startDate, startTime, endDate, endTime string
 	var startDateTime, endDateTime time.Time
 	uid, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
+	summary = GetString("Enter event summary: ")
 	for {
 		name = GetString("Enter event type [event, todo]: ")
 		if strings.ToUpper(name) == "EVENT" {
@@ -116,7 +144,7 @@ func GetEvent() (*mycal.Event, error) {
 	return &mycal.Event{
 		Name:          name,
 		Uid:           uid.String(),
-		Summary:       GetString("Enter event summary: "),
+		Summary:       summary,
 		DateTimeStart: startDateTime,
 		DateTimeEnd:   endDateTime,
 		Attendees:     attendees,
@@ -124,17 +152,19 @@ func GetEvent() (*mycal.Event, error) {
 	}, nil
 }
 
-func GetRecurrentEvent() (string, string, time.Time, string, int, int, int, error) {
-	var startDate, startTime, name, uid, freq string
-	var startDateTime time.Time
-	var num, interval, count, until, ans int
+func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
+	var attendees []string
+	var byDay, byMonthDay, byYearDay, byMonth, byWeekNo, bySetPos, byHour []int
+	var summary, name, startDate, startTime, freq, untilDate, untilTime, organizer string
+	var startDateTime, untilDateTime time.Time
+	var frequency, interval, count, ans int
 
 	name = "VEVENT"
 	uuid, err := uuid.NewUUID()
 	if err != nil {
-		return "", "", time.Time{}, "", 0, 0, 0, err
+		return nil, err
 	}
-	uid = uuid.String()
+	summary = GetString("Enter event summary: ")
 	for {
 		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
 		startTime = GetString("Enter event start time (HH.MM.SS): ")
@@ -146,42 +176,108 @@ func GetRecurrentEvent() (string, string, time.Time, string, int, int, int, erro
 		}
 		break
 	}
-	fmt.Print("Enter number of recurrency rules: ")
-	fmt.Scan(&num)
-	for num > 0 {
-		cont := true
-		for cont {
-			freq = GetString("Enter frequency [Y, MO, D, H, MI]: ")
-			switch strings.ToUpper(freq) {
-			case "Y":
-				freq = "YEARLY"
-				cont = false
-			case "MO":
-				freq = "MONTHLY"
-				cont = false
-			case "D":
-				freq = "DAILY"
-				cont = false
-			case "H":
-				freq = "HOURLY"
-				cont = false
-			case "MI":
-				freq = "MINUTELY"
-				cont = false
-			}
+	cont := true
+	for cont {
+		freq = GetString("Enter frequency [Y, MO, W, D, H, MI, S]: ")
+		switch strings.ToUpper(freq) {
+		case "Y":
+			frequency = 0
+			cont = false
+		case "MO":
+			frequency = 1
+			cont = false
+		case "W":
+			frequency = 2
+			cont = false
+		case "D":
+			frequency = 3
+			cont = false
+		case "H":
+			frequency = 4
+			cont = false
+		case "MI":
+			frequency = 5
+			cont = false
+		case "S":
+			frequency = 6
+			cont = false
 		}
-		interval = GetInt("Enter interval or 0 to skip: ")
-		ans = GetInt("Count, until or skip? [1/2/0]: ")
-		switch ans {
-		case 1:
-			count = GetInt("Enter count: ")
-
-		case 2:
-			until = GetInt("Enter until: ")
-		}
-		num--
 	}
-	return name, uid, startDateTime, freq, interval, count, until, nil
+	interval = GetInt("Enter interval: ")
+	ans = GetInt("Count, until or skip? [1/2/0]: ")
+	switch ans {
+	case 1:
+		count = GetInt("Enter count: ")
+	case 2:
+		for {
+			untilDate = GetString("Enter event start date (YYYY.MM.DD): ")
+			untilTime = GetString("Enter event start time (HH.MM.SS): ")
+
+			untilDateTime, err = time.Parse("2006.01.02 15.04.05", untilDate+" "+untilTime)
+			if err != nil {
+				fmt.Println("invalid start date/time format")
+				continue
+			}
+			break
+		}
+	}
+
+	byDay, err = GetInts("Enter by days [num of day in week, num of day in year]: ")
+	if err != nil {
+		return nil, err
+	}
+	byMonthDay, err = GetInts("Enter by month days: ")
+	if err != nil {
+		return nil, err
+	}
+	byYearDay, err = GetInts("Enter by year days: ")
+	if err != nil {
+		return nil, err
+	}
+	byMonth, err = GetInts("Enter by months: ")
+	if err != nil {
+		return nil, err
+	}
+	byWeekNo, err = GetInts("Enter by week numbers: ")
+	if err != nil {
+		return nil, err
+	}
+	bySetPos, err = GetInts("Enter position by set: ")
+	if err != nil {
+		return nil, err
+	}
+	byHour, err = GetInts("Enter by hour numbers")
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		attendee := GetString("Enter attendee email (or 0 to finish): ")
+		if attendee == "0" {
+			break
+		}
+		attendees = append(attendees, attendee)
+	}
+	if attendees != nil {
+		organizer = GetString("Enter organizer email: ")
+	}
+	return &mycal.ReccurentEvent{Name: name,
+		Summary:       summary,
+		Uid:           uuid.String(),
+		DateTimeStart: startDateTime,
+		DateTimeUntil: untilDateTime,
+		Frequency:     frequency,
+		Count:         count,
+		Interval:      interval,
+		ByDay:         byDay,
+		ByMonthDay:    byMonthDay,
+		ByYearDay:     byYearDay,
+		ByMonth:       byMonth,
+		ByWeekNo:      byWeekNo,
+		BySetPos:      bySetPos,
+		ByHour:        byHour,
+		Attendees:     attendees,
+		Organizer:     organizer}, nil
 }
 
 func StartMenu(url string) {
@@ -227,7 +323,9 @@ func StartMenu(url string) {
 
 func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context) error {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	FailOnError(err, "Error finding calendar homeset")
+	if err != nil {
+		return err
+	}
 	for {
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")
@@ -285,7 +383,8 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 	for {
 		fmt.Println("1. List events")
 		fmt.Println("2. Create event")
-		fmt.Println("3. Delete event")
+		fmt.Println("3. Create recurrent event")
+		fmt.Println("4. Delete event")
 		fmt.Println("0. Back to calendar menu")
 		var answer int
 		fmt.Scan(&answer)
@@ -328,6 +427,44 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				BlueLine("Event created\n")
 			}
 		case 3:
+			newRecEvent, err := GetRecurrentEvent()
+			if err != nil {
+				RedLine(err)
+				break
+			}
+			recEvent := mycal.GetRecurrentEvent(newRecEvent)
+			err = mycal.CreateEvent(ctx, client, homeset, calendarName, recEvent)
+			if err != nil {
+				RedLine(err)
+				break
+			}
+			BlueLine("Recurrent event created\n")
+
+			// newEvent, err := GetEvent()
+			// if err != nil {
+			// 	RedLine(err)
+			// 	break
+			// }
+			// switch newEvent.Name {
+			// case "VTODO":
+			// 	todo := mycal.GetTodo(newEvent)
+			// 	err = mycal.CreateEvent(ctx, client, homeset, calendarName, todo)
+			// 	if err != nil {
+			// 		RedLine(err)
+			// 		break
+			// 	}
+			// 	BlueLine("Todo created\n")
+			// case "VEVENT":
+			// 	event := mycal.GetEvent(newEvent)
+			// 	err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
+			// 	if err != nil {
+			// 		RedLine(err)
+			// 		break
+			// 	}
+			// 	BlueLine("Event created\n")
+			// }
+
+		case 4:
 			eventUID := GetString("Enter event UID: ")
 			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {
