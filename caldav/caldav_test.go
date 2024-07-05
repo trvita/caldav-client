@@ -230,6 +230,30 @@ func TestCreateEventWrong(t *testing.T) {
 	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
 	assert.Error(t, err)
 }
+func TestDeleteEventWrong(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	err = Delete(ctx, client, homeset+existingCalendarName+"/"+invalidUID+".ics")
+	assert.Error(t, err)
+}
+func TestDeleteCalendarWrong(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	err = Delete(ctx, client, homeset+nonExistingCalendarName)
+	assert.Error(t, err)
+}
 
 // func TestFindEventsWithExpand(t *testing.T) {
 // 	start, err := time.Parse("2006.01.02 15.04.05", "2020.02.02 00.00.00")
