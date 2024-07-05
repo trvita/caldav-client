@@ -2,7 +2,6 @@ package caldav
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"os"
 	"testing"
@@ -13,14 +12,16 @@ import (
 var URL = "http://127.0.0.1:90/dav.php"
 var testCredentials = "testuser\ntestpassword\n"
 
-var listCalendarsOutput = "Calendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
-var listCalendarsOutputWithNew = "Calendar: cal-new\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
+var listCalendarsOutput = "Calendar: cal-empty\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
+var listCalendarsOutputWithNew = "Calendar: cal-empty\nCalendar: cal-new\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
 
 var newCalendarName = "cal-new"
 var existingCalendarName = "default"
-
+var emptyCalendarName = "cal-empty"
 var nonExistingCalendarName = "wrong"
-var calendarNotFound = errors.New("calendar with name wrong not found")
+
+var validUID = "uid"
+var invalidUID = "invalid"
 
 func TestGetCredentials(t *testing.T) {
 	input := bytes.NewBufferString("testuser\ntestpassword\n")
@@ -133,7 +134,20 @@ func TestFindCalendarWrong(t *testing.T) {
 
 	err = FindCalendar(ctx, client, homeset, nonExistingCalendarName)
 	assert.Error(t, err)
-	assert.Equal(t, err, calendarNotFound)
+}
+
+func TestListEvents(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+
+	err = ListEvents(ctx, client, homeset, existingCalendarName)
+	assert.NoError(t, err)
 }
 
 func TestListEventsWrong(t *testing.T) {
@@ -146,7 +160,35 @@ func TestListEventsWrong(t *testing.T) {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	assert.NoError(t, err)
 
+	err = ListEvents(ctx, client, homeset, emptyCalendarName)
+	assert.Error(t, err)
+}
+
+func TestListTodos(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+
 	err = ListEvents(ctx, client, homeset, existingCalendarName)
+	assert.NoError(t, err)
+}
+
+func TestListTodosWrong(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+
+	err = ListEvents(ctx, client, homeset, emptyCalendarName)
 	assert.Error(t, err)
 }
 
