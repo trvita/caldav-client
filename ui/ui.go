@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -33,11 +34,16 @@ func RedLine(err error) {
 	fmt.Printf("\u001b[31m%s\u001b[0m\n", err)
 }
 
-func GetString(message string) string {
-	var str string
-	fmt.Print(message)
-	fmt.Scan(&str)
-	return str
+func GetString(r io.Reader, message string) (string, error) {
+	reader := bufio.NewReader(r)
+	if r == os.Stdin {
+		fmt.Print(message)
+	}
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return str, nil
 }
 
 func GetStrings(message string) string {
@@ -97,9 +103,15 @@ func GetEvent() (*mycal.Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	summary = GetString("Enter event summary: ")
+	summary, err = GetString(os.Stdin, "Enter event summary: ")
+	if err != nil {
+		return nil, err
+	}
 	for {
-		name = GetString("Enter event type [event, todo]: ")
+		name, err = GetString(os.Stdin, "Enter event type [event, todo]: ")
+		if err != nil {
+			return nil, err
+		}
 		if strings.ToUpper(name) == "EVENT" {
 			name = "VEVENT"
 			break
@@ -110,9 +122,14 @@ func GetEvent() (*mycal.Event, error) {
 		}
 	}
 	for {
-		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
-		startTime = GetString("Enter event start time (HH.MM.SS): ")
-
+		startDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+		if err != nil {
+			return nil, err
+		}
+		startTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+		if err != nil {
+			return nil, err
+		}
 		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
 		if err != nil {
 			fmt.Println("invalid start date/time format")
@@ -121,9 +138,14 @@ func GetEvent() (*mycal.Event, error) {
 		break
 	}
 	for {
-		endDate = GetString("Enter event end date (YYYY.MM.DD): ")
-		endTime = GetString("Enter event end time (HH.MM.SS): ")
-
+		endDate, err = GetString(os.Stdin, "Enter event end date (YYYY.MM.DD): ")
+		if err != nil {
+			return nil, err
+		}
+		endTime, err = GetString(os.Stdin, "Enter event end time (HH.MM.SS): ")
+		if err != nil {
+			return nil, err
+		}
 		endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
 		if err != nil {
 			fmt.Println("invalid end date/time format")
@@ -132,14 +154,21 @@ func GetEvent() (*mycal.Event, error) {
 		break
 	}
 	for {
-		attendee := GetString("Enter attendee email (or 0 to finish): ")
+		attendee, err := GetString(os.Stdin, "Enter attendee email (or 0 to finish): ")
+		if err != nil {
+			return nil, err
+		}
 		if attendee == "0" {
 			break
 		}
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer = GetString("Enter organizer email: ")
+		organizer, err = GetString(os.Stdin, "Enter organizer email: ")
+		if err != nil {
+			return nil, err
+		}
+
 	}
 	return &mycal.Event{
 		Name:          name,
@@ -164,10 +193,19 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	summary = GetString("Enter event summary: ")
+	summary, err = GetString(os.Stdin, "Enter event summary: ")
+	if err != nil {
+		return nil, err
+	}
 	for {
-		startDate = GetString("Enter event start date (YYYY.MM.DD): ")
-		startTime = GetString("Enter event start time (HH.MM.SS): ")
+		startDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+		if err != nil {
+			return nil, err
+		}
+		startTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+		if err != nil {
+			return nil, err
+		}
 
 		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
 		if err != nil {
@@ -178,7 +216,10 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 	}
 	cont := true
 	for cont {
-		freq = GetString("Enter frequency [Y, MO, W, D, H, MI, S]: ")
+		freq, err = GetString(os.Stdin, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(freq) {
 		case "Y":
 			frequency = 0
@@ -210,8 +251,14 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		count = GetInt("Enter count: ")
 	case 2:
 		for {
-			untilDate = GetString("Enter event start date (YYYY.MM.DD): ")
-			untilTime = GetString("Enter event start time (HH.MM.SS): ")
+			untilDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+			if err != nil {
+				return nil, err
+			}
+			untilTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+			if err != nil {
+				return nil, err
+			}
 
 			untilDateTime, err = time.Parse("2006.01.02 15.04.05", untilDate+" "+untilTime)
 			if err != nil {
@@ -252,14 +299,21 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 	}
 
 	for {
-		attendee := GetString("Enter attendee email (or 0 to finish): ")
+		attendee, err := GetString(os.Stdin, "Enter attendee email (or 0 to finish): ")
+		if err != nil {
+			return nil, err
+		}
 		if attendee == "0" {
 			break
 		}
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer = GetString("Enter organizer email: ")
+		organizer, err = GetString(os.Stdin, "Enter organizer email: ")
+		if err != nil {
+			return nil, err
+		}
+
 	}
 	return &mycal.ReccurentEvent{Name: name,
 		Summary:       summary,
@@ -343,17 +397,26 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 			}
 		case 2:
-			calendarName := GetString("Enter calendar name to go to:")
-			err := mycal.FindCalendar(ctx, client, homeset, calendarName)
+			calendarName, err := GetString(os.Stdin, "Enter calendar name to go to:")
+			if err != nil {
+				return err
+			}
+			err = mycal.FindCalendar(ctx, client, homeset, calendarName)
 			if err != nil {
 				RedLine(err)
 				break
 			}
 			EventMenu(ctx, client, homeset, calendarName)
 		case 3:
-			calendarName := GetString("Enter new calendar name: ")
+			calendarName, err := GetString(os.Stdin, "Enter new calendar name: ")
+			if err != nil {
+				return err
+			}
 			description := GetStrings("Enter new calendar description: ")
-			err := mycal.CreateCalendar(ctx, httpClient, URL, homeset, calendarName, description)
+			if err != nil {
+				return err
+			}
+			err = mycal.CreateCalendar(ctx, httpClient, URL, homeset, calendarName, description)
 			if err != nil {
 				RedLine(err)
 				break
@@ -365,8 +428,11 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 			}
 		case 5:
-			calendarName := GetString("Enter calendar name to delete: ")
-			err := mycal.Delete(ctx, client, homeset+calendarName)
+			calendarName, err := GetString(os.Stdin, "Enter calendar name to delete: ")
+			if err != nil {
+				return err
+			}
+			err = mycal.Delete(ctx, client, homeset+calendarName)
 			if err != nil {
 				RedLine(err)
 				break
@@ -446,7 +512,14 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// var err error
 			// for {
 			// 	startDate := GetString("Enter date to find from (YYYY.MM.DD): ")
+			//if err != nil {
+			// 	return err
+			// }
+
 			// 	startTime := GetString("Enter time to find from (HH.MM.SS): ")
+			// if err != nil {
+			// 	return err
+			// }
 
 			// 	startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
 			// 	if err != nil {
@@ -457,7 +530,14 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// }
 			// for {
 			// 	endDate := GetString("Enter event end date (YYYY.MM.DD): ")
+			// if err != nil {
+			// 	return err
+			// }
+
 			// 	endTime := GetString("Enter event end time (HH.MM.SS): ")
+			// if err != nil {
+			// 	return err
+			// }
 
 			// 	endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
 			// 	if err != nil {
@@ -471,8 +551,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	RedLine(err)
 			// }
 		case 5:
-			eventUID := GetString("Enter event UID: ")
-			err := mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
+			eventUID, err := GetString(os.Stdin, "Enter event UID: ")
+			if err != nil {
+				RedLine(err)
+				break
+			}
+			err = mycal.Delete(ctx, client, homeset+calendarName+"/"+eventUID+".ics")
 			if err != nil {
 				RedLine(err)
 				break
