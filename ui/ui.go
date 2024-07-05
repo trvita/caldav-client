@@ -327,34 +327,6 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 		RedLine(err)
 		return err
 	}
-	var startDateTime, endDateTime time.Time
-	for {
-		startDate := GetString("Enter date to find from (YYYY.MM.DD): ")
-		startTime := GetString("Enter time to find from (HH.MM.SS): ")
-
-		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
-		if err != nil {
-			fmt.Println("invalid start date/time format")
-			continue
-		}
-		break
-	}
-	for {
-		endDate := GetString("Enter event end date (YYYY.MM.DD): ")
-		endTime := GetString("Enter event end time (HH.MM.SS): ")
-
-		endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
-		if err != nil {
-			fmt.Println("invalid end date/time format")
-			continue
-		}
-		break
-	}
-	err = mycal.FindEventsWithExpand(ctx, httpClient, URL, homeset, GetString("Enter calendar name to list events: "), startDateTime, endDateTime)
-	if err != nil {
-		RedLine(err)
-		return err
-	}
 	for {
 		fmt.Println("1. List calendars")
 		fmt.Println("2. Goto calendar")

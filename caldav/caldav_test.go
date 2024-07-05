@@ -136,8 +136,18 @@ func TestFindCalendarWrong(t *testing.T) {
 	assert.Equal(t, err, calendarNotFound)
 }
 
-func TestListEvents(t *testing.T) {
-	
+func TestListEventsWrong(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+
+	err = ListEvents(ctx, client, homeset, existingCalendarName)
+	assert.Error(t, err)
 }
 
 // func TestFindEventsWithExpand(t *testing.T) {
