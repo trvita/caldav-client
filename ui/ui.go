@@ -60,9 +60,11 @@ func GetInt(r io.Reader, message string) (int, error) {
 	return num, nil
 }
 
-func GetInts(message string) ([]int, error) {
-	fmt.Print(message)
-	reader := bufio.NewReader(os.Stdin)
+func GetInts(r io.Reader, message string) ([]int, error) {
+	reader := bufio.NewReader(r)
+	if r == os.Stdin {
+		fmt.Print(message)
+	}
 	str, err := reader.ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -70,7 +72,7 @@ func GetInts(message string) ([]int, error) {
 
 	str = strings.TrimSpace(str)
 	if str == "" {
-		return nil, nil
+		return nil, err
 	}
 	numbersStr := strings.Split(str, ",")
 	var numbersInt []int
@@ -88,9 +90,16 @@ func GetInts(message string) ([]int, error) {
 }
 
 func GetUsernameBaikal(homeset string) string {
+	if homeset == "" {
+		return ""
+	}
 	startMarker := URLstart
 	startPos := strings.Index(homeset, startMarker)
-	startPos += len(startMarker)
+	if startPos == -1 {
+		startPos = 0
+	} else {
+		startPos += len(startMarker)
+	}
 	username := homeset[startPos:(len(homeset) - 1)]
 
 	return username
@@ -279,31 +288,31 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		}
 	}
 
-	byDay, err = GetInts("Enter by days [num of day in week, num of day in year]: ")
+	byDay, err = GetInts(os.Stdin, "Enter by days [num of day in week, num of day in year]: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonthDay, err = GetInts("Enter by month days: ")
+	byMonthDay, err = GetInts(os.Stdin, "Enter by month days: ")
 	if err != nil {
 		return nil, err
 	}
-	byYearDay, err = GetInts("Enter by year days: ")
+	byYearDay, err = GetInts(os.Stdin, "Enter by year days: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonth, err = GetInts("Enter by months: ")
+	byMonth, err = GetInts(os.Stdin, "Enter by months: ")
 	if err != nil {
 		return nil, err
 	}
-	byWeekNo, err = GetInts("Enter by week numbers: ")
+	byWeekNo, err = GetInts(os.Stdin, "Enter by week numbers: ")
 	if err != nil {
 		return nil, err
 	}
-	bySetPos, err = GetInts("Enter position by set: ")
+	bySetPos, err = GetInts(os.Stdin, "Enter position by set: ")
 	if err != nil {
 		return nil, err
 	}
-	byHour, err = GetInts("Enter by hour numbers")
+	byHour, err = GetInts(os.Stdin, "Enter by hour numbers")
 	if err != nil {
 		return nil, err
 	}
