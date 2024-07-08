@@ -44,7 +44,7 @@ func GetString(r io.Reader, message string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return str, nil
+	return strings.TrimSpace(str), nil
 }
 
 func GetInt(r io.Reader, message string) (int, error) {
@@ -105,7 +105,7 @@ func GetUsernameBaikal(homeset string) string {
 	return username
 }
 
-func GetEvent() (*mycal.Event, error) {
+func GetEvent(r io.Reader) (*mycal.Event, error) {
 	var attendees []string
 	var summary, organizer, name, startDate, startTime, endDate, endTime string
 	var startDateTime, endDateTime time.Time
@@ -113,12 +113,12 @@ func GetEvent() (*mycal.Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	summary, err = GetString(os.Stdin, "Enter event summary: ")
+	summary, err = GetString(r, "Enter event summary: ")
 	if err != nil {
 		return nil, err
 	}
 	for {
-		name, err = GetString(os.Stdin, "Enter event type [event, todo]: ")
+		name, err = GetString(r, "Enter event type [event, todo]: ")
 		if err != nil {
 			return nil, err
 		}
@@ -132,11 +132,11 @@ func GetEvent() (*mycal.Event, error) {
 		}
 	}
 	for {
-		startDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+		startDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		startTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+		startTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -148,11 +148,11 @@ func GetEvent() (*mycal.Event, error) {
 		break
 	}
 	for {
-		endDate, err = GetString(os.Stdin, "Enter event end date (YYYY.MM.DD): ")
+		endDate, err = GetString(r, "Enter event end date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		endTime, err = GetString(os.Stdin, "Enter event end time (HH.MM.SS): ")
+		endTime, err = GetString(r, "Enter event end time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +164,7 @@ func GetEvent() (*mycal.Event, error) {
 		break
 	}
 	for {
-		attendee, err := GetString(os.Stdin, "Enter attendee email (or 0 to finish): ")
+		attendee, err := GetString(r, "Enter attendee email (or 0 to finish): ")
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func GetEvent() (*mycal.Event, error) {
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer, err = GetString(os.Stdin, "Enter organizer email: ")
+		organizer, err = GetString(r, "Enter organizer email: ")
 		if err != nil {
 			return nil, err
 		}
@@ -353,7 +353,7 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		Organizer:     organizer}, nil
 }
 
-func StartMenu(url string) {
+func StartMenu(url string, r io.Reader) {
 	BlueLine("Main menu:\n")
 	for {
 		fmt.Println("1. Log in")
@@ -383,7 +383,7 @@ func StartMenu(url string) {
 					return
 				}
 			}
-			err = CalendarMenu(httpClient, client, principal, ctx)
+			err = CalendarMenu(httpClient, client, principal, ctx, r)
 			if err != nil {
 				RedLine(err)
 			}
@@ -394,7 +394,7 @@ func StartMenu(url string) {
 	}
 }
 
-func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context) error {
+func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal string, ctx context.Context, r io.Reader) error {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	if err != nil {
 		RedLine(err)
@@ -425,7 +425,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 				break
 			}
-			EventMenu(ctx, client, homeset, calendarName)
+			EventMenu(ctx, client, homeset, calendarName, r)
 		case 3:
 			calendarName, err := GetString(os.Stdin, "Enter new calendar name: ")
 			if err != nil {
@@ -464,7 +464,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 	}
 }
 
-func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calendarName string) {
+func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calendarName string, r io.Reader) {
 	BlueLine("Current calendar: " + calendarName + "\n")
 	for {
 		fmt.Println("1. List events")
@@ -490,7 +490,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			}
 			// create event or todo
 		case 2:
-			newEvent, err := GetEvent()
+			newEvent, err := GetEvent(r)
 			if err != nil {
 				RedLine(err)
 				break
