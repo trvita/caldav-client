@@ -123,7 +123,7 @@ func TestFindCalendarCorrect(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestFindCalendarWrong(t *testing.T) {
+func TestFindCalendarFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -151,7 +151,7 @@ func TestListEvents(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestListEventsWrong(t *testing.T) {
+func TestListEventsFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -179,7 +179,7 @@ func TestListTodos(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestListTodosWrong(t *testing.T) {
+func TestListTodosFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -216,7 +216,7 @@ func TestCreateEvent(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCreateEventWrong(t *testing.T) {
+func TestCreateEventFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -230,7 +230,7 @@ func TestCreateEventWrong(t *testing.T) {
 	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
 	assert.Error(t, err)
 }
-func TestDeleteEventWrong(t *testing.T) {
+func TestDeleteEventFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -242,7 +242,7 @@ func TestDeleteEventWrong(t *testing.T) {
 	err = Delete(ctx, client, homeset+existingCalendarName+"/"+invalidUID+".ics")
 	assert.Error(t, err)
 }
-func TestDeleteCalendarWrong(t *testing.T) {
+func TestDeleteCalendarFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
