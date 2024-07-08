@@ -40,25 +40,26 @@ func GetString(r io.Reader, message string) (string, error) {
 		fmt.Print(message)
 	}
 	str, err := reader.ReadString('\n')
+	str = strings.Trim(str, "\n")
 	if err != nil {
 		return "", err
 	}
 	return str, nil
 }
 
-func GetStrings(message string) string {
-	fmt.Print(message)
-	reader := bufio.NewReader(os.Stdin)
-	str, _ := reader.ReadString('\n')
-	return strings.TrimSpace(str)
+func GetInt(r io.Reader, message string) (int, error) {
+	var num int
+	reader := bufio.NewReader(r)
+	if r == os.Stdin {
+		fmt.Print(message)
+	}
+	_, err := fmt.Fscanf(reader, "%d\n", &num)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
-func GetInt(message string) int {
-	var num int
-	fmt.Print(message)
-	fmt.Scan(&num)
-	return num
-}
 func GetInts(message string) ([]int, error) {
 	fmt.Print(message)
 	reader := bufio.NewReader(os.Stdin)
@@ -244,11 +245,20 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 			cont = false
 		}
 	}
-	interval = GetInt("Enter interval: ")
-	ans = GetInt("Count, until or skip? [1/2/0]: ")
+	interval, err = GetInt(os.Stdin, "Enter interval: ")
+	if err != nil {
+		return nil, err
+	}
+	ans, err = GetInt(os.Stdin, "Count, until or skip? [1/2/0]: ")
+	if err != nil {
+		return nil, err
+	}
 	switch ans {
 	case 1:
-		count = GetInt("Enter count: ")
+		count, err = GetInt(os.Stdin, "Enter count: ")
+		if err != nil {
+			return nil, err
+		}
 	case 2:
 		for {
 			untilDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
@@ -412,7 +422,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 			if err != nil {
 				return err
 			}
-			description := GetStrings("Enter new calendar description: ")
+			description, err := GetString(os.Stdin, "Enter new calendar description: ")
 			if err != nil {
 				return err
 			}
