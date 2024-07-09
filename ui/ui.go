@@ -384,9 +384,23 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 	return &mycal.Modifications{
 		PartStat:     partstat,
 		DelegateTo:   "mailto:" + delegateto,
-		CalendarName:  calendarName,
+		CalendarName: calendarName,
 		LastModified: time.Now(),
 	}, nil
+}
+
+func PrintEvents(resp []caldav.CalendarObject) {
+	for _, calendarObject := range resp {
+		fmt.Printf("path: %s\n", calendarObject.Path)
+		for _, event := range calendarObject.Data.Children {
+			for _, prop := range event.Props {
+				for _, p := range prop {
+					fmt.Printf("%s: %s\n", p.Name, p.Value)
+				}
+			}
+			fmt.Println()
+		}
+	}
 }
 func StartMenu(url string, r io.Reader) {
 	BlueLine("Main menu:\n")
@@ -514,15 +528,17 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 		// list events
 		case 1:
 			BlueLine(calendarName + " EVENTS:\n")
-			err := mycal.ListEvents(ctx, client, homeset, calendarName)
+			resp, err := mycal.GetEvents(ctx, client, homeset, calendarName)
 			if err != nil {
 				RedLine(err)
 			}
+			PrintEvents(resp)
 			BlueLine(calendarName + " TODOS:\n")
-			err = mycal.ListTodos(ctx, client, homeset, calendarName)
+			resp, err = mycal.ListTodos(ctx, client, homeset, calendarName)
 			if err != nil {
 				RedLine(err)
 			}
+			PrintEvents(resp)
 			// create event or todo
 		case 2:
 			newEvent, err := GetEvent(r)
@@ -636,10 +652,11 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 		fmt.Scan(&answer)
 		switch answer {
 		case 1:
-			err := mycal.ListEvents(ctx, client, homeset, "inbox")
+			resp, err := mycal.GetEvents(ctx, client, homeset, "inbox")
 			if err != nil {
 				return err
 			}
+			PrintEvents(resp)
 		case 2:
 			eventUID, err := GetString(r, "Enter event UID:  ")
 			if err != nil {
