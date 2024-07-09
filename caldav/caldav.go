@@ -54,6 +54,7 @@ type Modifications struct {
 	PartStat     string
 	LastModified time.Time
 	DelegateTo   string
+	CalendarName string
 }
 
 func ExtractNameFromEmail(email string) string {
@@ -427,8 +428,7 @@ func Delete(ctx context.Context, client *caldav.Client, path string) error {
 
 func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
 	eventUrl := homeset[9:] + calendarName + "/" + eventPath + ".ics"
-	// TODO find out where to put modified events
-	defaultEventUrl := homeset[9:] + "default" + "/" + eventPath + ".ics"
+	var newEventUrl string
 	obj, err := client.GetCalendarObject(ctx, eventUrl)
 	if err != nil {
 		return err
@@ -456,6 +456,17 @@ func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarNa
 		return fmt.Errorf("attendee property not found in event with UID %s", eventUID)
 	}
 	if mods.PartStat != "" {
+		if mods.PartStat == "DECLINED" {
+			err = Delete(ctx, client, eventUrl)
+			if err != nil {
+				return err
+			} else {
+				return nil
+			}
+		}
+		if mods.PartStat == "ACCEPTED" {
+			newEventUrl = homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
+		}
 		att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
 	}
 	if !mods.LastModified.IsZero() {
@@ -471,7 +482,7 @@ func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarNa
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 	calendar.Children = append(calendar.Children, foundComponent)
 
-	_, err = client.PutCalendarObject(ctx, defaultEventUrl, calendar)
+	_, err = client.PutCalendarObject(ctx, newEventUrl, calendar)
 	if err != nil {
 		return err
 	}

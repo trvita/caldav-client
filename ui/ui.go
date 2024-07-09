@@ -359,7 +359,7 @@ func GetRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 }
 
 func GetModifications(r io.Reader) (*mycal.Modifications, error) {
-	var partstat, delegateto string
+	var partstat, delegateto, calendarName string
 	var err error
 	var answer byte
 
@@ -367,11 +367,14 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 	fmt.Scan(&answer)
 	switch answer {
 	case 'y':
-		partstat = string(ical.EventConfirmed)
+		partstat = "ACCEPTED"
+		calendarName, err = GetString(r, "Enter which calendar event goes to: ")
+		if err != nil {
+			return nil, err
+		}
 	case 'n':
-		partstat = string(ical.EventCancelled)
+		partstat = "DECLINED"
 	case 'd':
-		// TODO add support for delegation
 		partstat = string(ical.ParamDelegatedTo)
 		delegateto, err = GetString(r, "Enter who to delegate: ")
 		if err != nil {
@@ -380,7 +383,8 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 	}
 	return &mycal.Modifications{
 		PartStat:     partstat,
-		DelegateTo:   delegateto,
+		DelegateTo:   "mailto:" + delegateto,
+		CalendarName:  calendarName,
 		LastModified: time.Now(),
 	}, nil
 }
