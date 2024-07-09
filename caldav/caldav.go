@@ -50,6 +50,12 @@ type ReccurentEvent struct {
 	Organizer     string
 }
 
+type Modifications struct {
+	PartStat     string
+	LastModified time.Time
+	DelegateTo   string
+}
+
 func ExtractNameFromEmail(email string) string {
 	emailParts := strings.Split(email, "@")
 	if len(emailParts) != 2 {
@@ -209,6 +215,7 @@ func ListEvents(ctx context.Context, client *caldav.Client, homeset, calendarNam
 	}
 	// maybe return props and not use print in caldav.go
 	for _, calendarObject := range resp {
+		fmt.Printf("path: %s\n", calendarObject.Path)
 		for _, event := range calendarObject.Data.Children {
 			for _, prop := range event.Props {
 				for _, p := range prop {
@@ -247,6 +254,7 @@ func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName
 	}
 	// maybe return props and not use print in caldav.go
 	for _, calendarObject := range resp {
+		fmt.Printf("path: %s\n", calendarObject.Path)
 		for _, event := range calendarObject.Data.Children {
 			for _, prop := range event.Props {
 				for _, p := range prop {
@@ -411,6 +419,59 @@ func FindEventsWithExpand(ctx context.Context, httpClient webdav.HTTPClient, url
 
 func Delete(ctx context.Context, client *caldav.Client, path string) error {
 	err := client.RemoveAll(ctx, path)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
+	eventUrl := homeset[9:] + calendarName + "/" + eventPath + ".ics"
+	// TODO find out where to put modified events
+	defaultEventUrl := homeset[9:] + "default" + "/" + eventPath + ".ics"
+	obj, err := client.GetCalendarObject(ctx, eventUrl)
+	if err != nil {
+		return err
+	}
+
+	var foundComponent *ical.Component
+	for _, comp := range obj.Data.Children {
+		uid, err := comp.Props.Text(ical.PropUID)
+		if err != nil {
+			return err
+		}
+		if uid == eventUID {
+			foundComponent = comp
+			break
+		}
+	}
+
+	if foundComponent == nil {
+		return fmt.Errorf("event with UID %s not found", eventUID)
+	}
+
+	// TODO fix, because takes first attendee, can be wrong email
+	att := foundComponent.Props.Get(ical.PropAttendee)
+	if att == nil {
+		return fmt.Errorf("attendee property not found in event with UID %s", eventUID)
+	}
+	if mods.PartStat != "" {
+		att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
+	}
+	if !mods.LastModified.IsZero() {
+		foundComponent.Props.SetDateTime(ical.PropLastModified, mods.LastModified)
+	}
+	if mods.DelegateTo != "" {
+		foundComponent.Props.SetText(ical.ParamDelegatedTo, mods.DelegateTo)
+	}
+
+	calendar := ical.NewCalendar()
+	calendar.Props.SetText(ical.PropVersion, "2.0")
+	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
+	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+	calendar.Children = append(calendar.Children, foundComponent)
+
+	_, err = client.PutCalendarObject(ctx, defaultEventUrl, calendar)
 	if err != nil {
 		return err
 	}

@@ -95,20 +95,4 @@ func TestGetUsernameBaikal(t *testing.T) {
 	assert.Empty(t, username)
 }
 
-// func TestGetEvent(t *testing.T) { // not working!!!
-// 	str := "summary\nevent\n2020.02.02\n00.00.00\n2021.02.02\n00.00.00\nattendee@mail.com\n0\norganizer@mail.com\n\n"
-// 	event, err := GetEvent(bytes.NewBufferString(str))
-// 	assert.NoError(t, err)
-
-// 	expectedStart, _ := time.Parse("2006.01.02 15.04.05", "2020.02.02 00.00.00")
-// 	expectedEnd, _ := time.Parse("2006.01.02 15.04.05", "2021.02.02 00.00.00")
-// 	expectedAttendees := []string{"attendee@mail.com"}
-
-// 	assert.Equal(t, "summary", event.Summary)
-// 	assert.Equal(t, "VEVENT", event.Name)
-// 	assert.Equal(t, expectedStart, event.DateTimeStart)
-// 	assert.Equal(t, expectedEnd, event.DateTimeEnd)
-// 	assert.Equal(t, expectedAttendees, event.Attendees)
-// 	assert.Equal(t, "organizer@mail.com", event.Organizer)
-// }
-
+// testing GetEvent is a problem since first call of GetString gets all input and others just get eof

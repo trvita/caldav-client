@@ -13,6 +13,8 @@ import (
 var URL = "http://127.0.0.1:90/dav.php"
 var testCredentials = "testuser\ntestpassword\n"
 
+//var testEmail = "some-mail@mail.com"
+
 var listCalendarsOutput = "Calendar: cal-empty\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
 var listCalendarsOutputWithNew = "Calendar: cal-empty\nCalendar: cal-new\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
 
@@ -20,9 +22,12 @@ var newCalendarName = "cal-new"
 var existingCalendarName = "default"
 var emptyCalendarName = "cal-empty"
 var nonExistingCalendarName = "wrong"
+var inboxCalendarName = "inbox"
 
 var validUID = "uid"
 var invalidUID = "invalid"
+var modificateUID = "65730b36-3da6-11ef-a609-80d21df4779b"
+var modificatePath = "sabredav-45a75696-351e-4d06-b505-abc1f4d86de4"
 
 func TestGetCredentials(t *testing.T) {
 	input := bytes.NewBufferString("testuser\ntestpassword\n")
@@ -267,3 +272,23 @@ func TestDeleteCalendarFail(t *testing.T) {
 // 	err = FindEventsWithExpand(ctx, httpClient, URL, homeset, "walks", start, end)
 // 	assert.NoError(t, err)
 // }
+
+func TestModifyEvent(t *testing.T) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, homeset)
+
+	var mods *Modifications = &Modifications{
+		PartStat:     "ACCEPTED",
+		LastModified: time.Now(),
+		DelegateTo:   "",
+	}
+	err = ModifyEvent(ctx, client, homeset, inboxCalendarName, modificateUID, modificatePath, mods)
+	assert.NoError(t, err)
+}

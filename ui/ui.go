@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/google/uuid"
@@ -36,7 +36,7 @@ func RedLine(err error) {
 
 func GetString(r io.Reader, message string) (string, error) {
 	reader := bufio.NewReader(r)
-	if r == os.Stdin {
+	if r == r {
 		fmt.Print(message)
 	}
 	str, err := reader.ReadString('\n')
@@ -47,10 +47,15 @@ func GetString(r io.Reader, message string) (string, error) {
 	return strings.TrimSpace(str), nil
 }
 
+func GetCommands(comms string) []string {
+	commands := strings.Split(comms, "\n")
+	return commands
+}
+
 func GetInt(r io.Reader, message string) (int, error) {
 	var num int
 	reader := bufio.NewReader(r)
-	if r == os.Stdin {
+	if r == r {
 		fmt.Print(message)
 	}
 	_, err := fmt.Fscanf(reader, "%d\n", &num)
@@ -62,7 +67,7 @@ func GetInt(r io.Reader, message string) (int, error) {
 
 func GetInts(r io.Reader, message string) ([]int, error) {
 	reader := bufio.NewReader(r)
-	if r == os.Stdin {
+	if r == r {
 		fmt.Print(message)
 	}
 	str, err := reader.ReadString('\n')
@@ -113,6 +118,7 @@ func GetEvent(r io.Reader) (*mycal.Event, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	summary, err = GetString(r, "Enter event summary: ")
 	if err != nil {
 		return nil, err
@@ -191,28 +197,27 @@ func GetEvent(r io.Reader) (*mycal.Event, error) {
 	}, nil
 }
 
-func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
+func GetRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 	var attendees []string
 	var byDay, byMonthDay, byYearDay, byMonth, byWeekNo, bySetPos, byHour []int
 	var summary, name, startDate, startTime, freq, untilDate, untilTime, organizer string
 	var startDateTime, untilDateTime time.Time
 	var frequency, interval, count, ans int
-
 	name = "VEVENT"
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
-	summary, err = GetString(os.Stdin, "Enter event summary: ")
+	summary, err = GetString(r, "Enter event summary: ")
 	if err != nil {
 		return nil, err
 	}
 	for {
-		startDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+		startDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		startTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+		startTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +231,7 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 	}
 	cont := true
 	for cont {
-		freq, err = GetString(os.Stdin, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
+		freq, err = GetString(r, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
 		if err != nil {
 			return nil, err
 		}
@@ -254,27 +259,27 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 			cont = false
 		}
 	}
-	interval, err = GetInt(os.Stdin, "Enter interval: ")
+	interval, err = GetInt(r, "Enter interval: ")
 	if err != nil {
 		return nil, err
 	}
-	ans, err = GetInt(os.Stdin, "Count, until or skip? [1/2/0]: ")
+	ans, err = GetInt(r, "Count, until or skip? [1/2/0]: ")
 	if err != nil {
 		return nil, err
 	}
 	switch ans {
 	case 1:
-		count, err = GetInt(os.Stdin, "Enter count: ")
+		count, err = GetInt(r, "Enter count: ")
 		if err != nil {
 			return nil, err
 		}
 	case 2:
 		for {
-			untilDate, err = GetString(os.Stdin, "Enter event start date (YYYY.MM.DD): ")
+			untilDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
 			if err != nil {
 				return nil, err
 			}
-			untilTime, err = GetString(os.Stdin, "Enter event start time (HH.MM.SS): ")
+			untilTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
 			if err != nil {
 				return nil, err
 			}
@@ -288,37 +293,37 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		}
 	}
 
-	byDay, err = GetInts(os.Stdin, "Enter by days [num of day in week, num of day in year]: ")
+	byDay, err = GetInts(r, "Enter by days [num of day in week, num of day in year]: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonthDay, err = GetInts(os.Stdin, "Enter by month days: ")
+	byMonthDay, err = GetInts(r, "Enter by month days: ")
 	if err != nil {
 		return nil, err
 	}
-	byYearDay, err = GetInts(os.Stdin, "Enter by year days: ")
+	byYearDay, err = GetInts(r, "Enter by year days: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonth, err = GetInts(os.Stdin, "Enter by months: ")
+	byMonth, err = GetInts(r, "Enter by months: ")
 	if err != nil {
 		return nil, err
 	}
-	byWeekNo, err = GetInts(os.Stdin, "Enter by week numbers: ")
+	byWeekNo, err = GetInts(r, "Enter by week numbers: ")
 	if err != nil {
 		return nil, err
 	}
-	bySetPos, err = GetInts(os.Stdin, "Enter position by set: ")
+	bySetPos, err = GetInts(r, "Enter position by set: ")
 	if err != nil {
 		return nil, err
 	}
-	byHour, err = GetInts(os.Stdin, "Enter by hour numbers")
+	byHour, err = GetInts(r, "Enter by hour numbers")
 	if err != nil {
 		return nil, err
 	}
 
 	for {
-		attendee, err := GetString(os.Stdin, "Enter attendee email (or 0 to finish): ")
+		attendee, err := GetString(r, "Enter attendee email (or 0 to finish): ")
 		if err != nil {
 			return nil, err
 		}
@@ -328,7 +333,7 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer, err = GetString(os.Stdin, "Enter organizer email: ")
+		organizer, err = GetString(r, "Enter organizer email: ")
 		if err != nil {
 			return nil, err
 		}
@@ -353,6 +358,32 @@ func GetRecurrentEvent() (*mycal.ReccurentEvent, error) {
 		Organizer:     organizer}, nil
 }
 
+func GetModifications(r io.Reader) (*mycal.Modifications, error) {
+	var partstat, delegateto string
+	var err error
+	var answer byte
+
+	fmt.Println("Accept, decline, delegate event? [y, n, d]")
+	fmt.Scan(&answer)
+	switch answer {
+	case 'y':
+		partstat = string(ical.EventConfirmed)
+	case 'n':
+		partstat = string(ical.EventCancelled)
+	case 'd':
+		// TODO add support for delegation
+		partstat = string(ical.ParamDelegatedTo)
+		delegateto, err = GetString(r, "Enter who to delegate: ")
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &mycal.Modifications{
+		PartStat:     partstat,
+		DelegateTo:   delegateto,
+		LastModified: time.Now(),
+	}, nil
+}
 func StartMenu(url string, r io.Reader) {
 	BlueLine("Main menu:\n")
 	for {
@@ -368,7 +399,7 @@ func StartMenu(url string, r io.Reader) {
 			var ctx context.Context
 			var err error
 			for {
-				httpClient, client, principal, ctx, err = mycal.CreateClient(url, os.Stdin)
+				httpClient, client, principal, ctx, err = mycal.CreateClient(url, r)
 				if err == nil {
 					break
 				}
@@ -383,6 +414,7 @@ func StartMenu(url string, r io.Reader) {
 					return
 				}
 			}
+
 			err = CalendarMenu(httpClient, client, principal, ctx, r)
 			if err != nil {
 				RedLine(err)
@@ -416,7 +448,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 			}
 		case 2:
-			calendarName, err := GetString(os.Stdin, "Enter calendar name to go to:")
+			calendarName, err := GetString(r, "Enter calendar name to go to:")
 			if err != nil {
 				return err
 			}
@@ -427,27 +459,26 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 			}
 			EventMenu(ctx, client, homeset, calendarName, r)
 		case 3:
-			calendarName, err := GetString(os.Stdin, "Enter new calendar name: ")
+			calendarName, err := GetString(r, "Enter new calendar name: ")
 			if err != nil {
 				return err
 			}
-			description, err := GetString(os.Stdin, "Enter new calendar description: ")
+			description, err := GetString(r, "Enter new calendar description: ")
 			if err != nil {
 				return err
 			}
 			err = mycal.CreateCalendar(ctx, httpClient, URL, homeset, calendarName, description)
 			if err != nil {
-				RedLine(err)
-				break
+				return err
 			}
 			BlueLine("Calendar " + calendarName + " created\n")
 		case 4:
-			err := mycal.ListEvents(ctx, client, homeset, "inbox")
+			err := InboxMenu(ctx, client, homeset, "inbox", r)
 			if err != nil {
-				RedLine(err)
+				return err
 			}
 		case 5:
-			calendarName, err := GetString(os.Stdin, "Enter calendar name to delete: ")
+			calendarName, err := GetString(r, "Enter calendar name to delete: ")
 			if err != nil {
 				return err
 			}
@@ -514,7 +545,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				BlueLine("Event created\n")
 			}
 		case 3:
-			newRecEvent, err := GetRecurrentEvent()
+			newRecEvent, err := GetRecurrentEvent(r)
 			if err != nil {
 				RedLine(err)
 				break
@@ -570,7 +601,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	RedLine(err)
 			// }
 		case 5:
-			eventUID, err := GetString(os.Stdin, "Enter event UID: ")
+			eventUID, err := GetString(r, "Enter event path to delete (without .ics): ")
 			if err != nil {
 				RedLine(err)
 				break
@@ -586,5 +617,45 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			BlueLine("Returning to calendar menu...\n")
 			return
 		}
+	}
+}
+
+func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calendarName string, r io.Reader) error {
+	fmt.Println("Current calendar: ", calendarName)
+	for {
+		fmt.Println("1. List events")
+		fmt.Println("2. Modify event")
+		fmt.Println("3. Accept or decline event")
+		fmt.Println("0. Return to calendar menu")
+
+		var answer int
+		fmt.Scan(&answer)
+		switch answer {
+		case 1:
+			err := mycal.ListEvents(ctx, client, homeset, "inbox")
+			if err != nil {
+				return err
+			}
+		case 2:
+			eventUID, err := GetString(r, "Enter event UID:  ")
+			if err != nil {
+				return err
+			}
+			eventPath, err := GetString(r, "Enter path to event: ")
+			if err != nil {
+				return err
+			}
+			mods, err := GetModifications(r)
+			if err != nil {
+				return err
+			}
+			err = mycal.ModifyEvent(ctx, client, homeset, calendarName, eventUID, eventPath, mods)
+			if err != nil {
+				return err
+			}
+		case 0:
+			return nil
+		}
+
 	}
 }
