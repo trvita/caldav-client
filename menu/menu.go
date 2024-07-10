@@ -360,7 +360,7 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			if err != nil {
 				return err
 			}
-			err = mycal.ModifyEvent(ctx, client, homeset, calendarName, eventUID, eventPath, mods)
+			err = mycal.ModifyAttendance(ctx, client, homeset, calendarName, eventUID, eventPath, mods)
 			if err != nil {
 				return err
 			}

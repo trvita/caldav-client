@@ -282,7 +282,7 @@ func TestDeleteCalendarFail(t *testing.T) {
 // 	assert.NoError(t, err)
 // }
 
-func TestModifyEvent(t *testing.T) {
+func TestAttend_CreateEventWithAttendee(t *testing.T) {
 	var client *caldav.Client
 	var principal, homeset string
 	var ctx context.Context
@@ -309,8 +309,13 @@ func TestModifyEvent(t *testing.T) {
 
 	err = CreateEvent(ctx, client, homeset, modCalendarName, event)
 	assert.NoError(t, err)
+}
 
-	// usertest modifies event
+func TestAttend_Reply(t *testing.T) {
+	var client *caldav.Client
+	var principal, homeset string
+	var ctx context.Context
+	var err error
 	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials2))
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
@@ -344,10 +349,16 @@ func TestModifyEvent(t *testing.T) {
 	path = path[34:]
 	path = path[:45]
 
-	err = ModifyEvent(ctx, client, homeset, inboxCalendarName, modificateUID, path, mods)
+	err = ModifyAttendance(ctx, client, homeset, inboxCalendarName, modificateUID, path, mods)
 	assert.NoError(t, err)
 
-	// testuser checks that participation status has been changed
+}
+func TestAttend_CheckStatus(t *testing.T) {
+	var client *caldav.Client
+	var principal, homeset string
+	var ctx context.Context
+	var err error
+	var resp []caldav.CalendarObject
 
 	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
@@ -371,8 +382,14 @@ func TestModifyEvent(t *testing.T) {
 			break
 		}
 	}
+}
 
-	//testuser and usertest clear mod and inbox calendar so the test can be run again
+func TestAttendClearAll(t *testing.T) {
+	var client *caldav.Client
+	var principal, homeset string
+	var ctx context.Context
+	var err error
+	var resp []caldav.CalendarObject
 
 	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
@@ -435,4 +452,23 @@ func TestModifyEvent(t *testing.T) {
 		err = Delete(ctx, client, r.Path)
 		assert.NoError(t, err)
 	}
+}
+
+func TestAddAttendee(t *testing.T) {
+	var client *caldav.Client
+	var principal, homeset string
+	var ctx context.Context
+	var err error
+
+	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err = client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, homeset)
+
+	err = AddAttendee(ctx, client, "likh.lyudmila1@yandex.ru", homeset, modCalendarName, modificateUID, modificateUID)
+	assert.NoError(t, err)
 }

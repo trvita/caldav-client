@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/emersion/go-ical"
 	"github.com/google/uuid"
 	mycal "github.com/trvita/caldav-client/caldav"
 )
@@ -74,8 +75,9 @@ func InputInts(r io.Reader, message string) ([]int, error) {
 
 func InputEvent(r io.Reader) (*mycal.Event, error) {
 	var attendees []string
-	var summary, organizer, name, startDate, startTime, endDate, endTime string
+	var summary, organizer, name, startDate, startTime, endDate, endTime, action, trigger string
 	var startDateTime, endDateTime time.Time
+
 	uid, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
@@ -148,6 +150,35 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		}
 
 	}
+	hasalarm, err := InputString(r, "Add alarm [y/n]: ")
+	if err != nil {
+		return nil, err
+	}
+	if hasalarm != "y" {
+		return &mycal.Event{
+			Name:          name,
+			Uid:           uid.String(),
+			Summary:       summary,
+			DateTimeStart: startDateTime,
+			DateTimeEnd:   endDateTime,
+			Attendees:     attendees,
+			Organizer:     organizer,
+			Alarm:         nil,
+		}, nil
+	}
+	if hasalarm == "y" {
+		action, err := InputString(r, "Enter action: [d - display, e - email]: ")
+		if err != nil {
+			return nil, err
+		}
+		switch action {
+		case "d":
+			action = ical.ParamDisplay
+		case "e":
+			action = ical.ParamEmail
+		}
+		
+	}
 	return &mycal.Event{
 		Name:          name,
 		Uid:           uid.String(),
@@ -156,6 +187,10 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		DateTimeEnd:   endDateTime,
 		Attendees:     attendees,
 		Organizer:     organizer,
+		Alarm: &mycal.Alarm{
+			Action:  action,
+			Trigger: trigger,
+		},
 	}, nil
 }
 

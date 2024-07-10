@@ -28,6 +28,16 @@ type Event struct {
 	DateTimeEnd   time.Time
 	Attendees     []string
 	Organizer     string
+	Alarm         *Alarm
+}
+
+type Alarm struct {
+	Action  string
+	Trigger string
+	// Description string
+	// Duration    time.Time
+	// Repeat      int
+	// Attendee []string
 }
 
 type ReccurentEvent struct {
@@ -271,6 +281,12 @@ func GetEvent(newEvent *Event) *ical.Event {
 		propOrg.Value = "mailto:" + newEvent.Organizer
 		event.Props.Add(propOrg)
 	}
+	if newEvent.Alarm != nil {
+		alarm := ical.NewComponent(ical.CompAlarm)
+		alarm.Props.SetText(ical.PropAction, newEvent.Alarm.Action)
+		alarm.Props.SetText(ical.PropTrigger, newEvent.Alarm.Trigger)
+		event.Children = append(event.Children, alarm)
+	}
 	return event
 }
 
@@ -409,19 +425,17 @@ func Delete(ctx context.Context, client *caldav.Client, path string) error {
 	return nil
 }
 
-func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
-	eventUrl := homeset[9:] + calendarName + "/" + eventPath + ".ics"
-	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
-	obj, err := client.GetCalendarObject(ctx, eventUrl)
+func FindEvent(ctx context.Context, client *caldav.Client, eventURL, eventUID string) (*ical.Component, error) {
+	obj, err := client.GetCalendarObject(ctx, eventURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var foundComponent *ical.Component
 	for _, comp := range obj.Data.Children {
 		uid, err := comp.Props.Text(ical.PropUID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if uid == eventUID {
 			foundComponent = comp
@@ -430,17 +444,28 @@ func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarNa
 	}
 
 	if foundComponent == nil {
-		return fmt.Errorf("event with UID %s not found", eventUID)
+		return nil, fmt.Errorf("event with UID %s not found", eventUID)
 	}
 
+	return foundComponent, nil
+}
+
+func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
+	eventURL := homeset[9:] + calendarName + "/" + eventPath + ".ics"
+	comp, err := FindEvent(ctx, client, eventURL, eventUID)
+	if err != nil {
+		return err
+	}
+	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
+
 	// TODO fix, because takes first attendee, can be wrong email
-	att := foundComponent.Props.Get(ical.PropAttendee)
+	att := comp.Props.Get(ical.PropAttendee)
 	if att == nil {
 		return fmt.Errorf("attendee property not found in event with UID %s", eventUID)
 	}
 	if mods.PartStat != "" {
 		if mods.PartStat == "DECLINED" {
-			err = Delete(ctx, client, eventUrl)
+			err = Delete(ctx, client, eventURL)
 			if err != nil {
 				return err
 			} else {
@@ -452,19 +477,45 @@ func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarNa
 		}
 	}
 	if !mods.LastModified.IsZero() {
-		foundComponent.Props.SetDateTime(ical.PropLastModified, mods.LastModified)
+		comp.Props.SetDateTime(ical.PropLastModified, mods.LastModified)
 	}
 	if mods.DelegateTo != "" {
-		foundComponent.Props.SetText(ical.ParamDelegatedTo, mods.DelegateTo)
+		comp.Props.SetText(ical.ParamDelegatedTo, mods.DelegateTo)
 	}
 
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
-	calendar.Children = append(calendar.Children, foundComponent)
+	calendar.Children = append(calendar.Children, comp)
 
 	_, err = client.PutCalendarObject(ctx, newEventUrl, calendar)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func AddAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, calendarName, eventUID, eventPath string) error {
+	eventURL := homeset[9:] + calendarName + "/" + eventPath + ".ics"
+	comp, err := FindEvent(ctx, client, eventURL, eventUID)
+	if err != nil {
+		return nil
+	}
+
+	prop := ical.NewProp(ical.PropAttendee)
+	prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
+	prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+	prop.Value = "mailto:" + attendee
+	comp.Props.Add(prop)
+
+	calendar := ical.NewCalendar()
+	calendar.Props.SetText(ical.PropVersion, "2.0")
+	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
+	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+	calendar.Children = append(calendar.Children, comp)
+
+	_, err = client.PutCalendarObject(ctx, eventURL, calendar)
 	if err != nil {
 		return err
 	}
