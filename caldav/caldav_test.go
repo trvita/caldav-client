@@ -225,7 +225,8 @@ func TestCreateEvent(t *testing.T) {
 		Attendees:     nil,
 		Organizer:     "",
 	}
-	event := GetEvent(e)
+	event, err := GetEvent(e)
+	assert.NoError(t, err)
 	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
 	assert.NoError(t, err)
 }
@@ -240,7 +241,8 @@ func TestCreateEventFail(t *testing.T) {
 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
 	assert.NoError(t, err)
 	e := &Event{}
-	event := GetEvent(e)
+	event, err := GetEvent(e)
+	assert.NoError(t, err)
 	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
 	assert.Error(t, err)
 }
@@ -305,7 +307,8 @@ func TestAttend_CreateEventWithAttendee(t *testing.T) {
 		Attendees:     []string{testEmail2},
 		Organizer:     testEmail1,
 	}
-	event := GetEvent(e)
+	event, err := GetEvent(e)
+	assert.NoError(t, err)
 
 	err = CreateEvent(ctx, client, homeset, modCalendarName, event)
 	assert.NoError(t, err)
@@ -469,6 +472,6 @@ func TestAddAttendee(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, homeset)
 
-	err = AddAttendee(ctx, client, "likh.lyudmila1@yandex.ru", homeset, modCalendarName, modificateUID, modificateUID)
+	err = PutAttendee(ctx, client, "likh.lyudmila1@yandex.ru", homeset, modCalendarName, modificateUID, modificateUID)
 	assert.NoError(t, err)
 }

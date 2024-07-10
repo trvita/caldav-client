@@ -41,23 +41,17 @@ type Alarm struct {
 }
 
 type ReccurentEvent struct {
-	Name          string
-	Summary       string
-	Uid           string
-	DateTimeStart time.Time
-	DateTimeUntil time.Time
-	Frequency     int
-	Count         int
-	Interval      int
-	ByDay         []int
-	ByMonthDay    []int
-	ByYearDay     []int
-	ByMonth       []int
-	ByWeekNo      []int
-	ByHour        []int
-	BySetPos      []int
-	Attendees     []string
-	Organizer     string
+	Event      *Event
+	Frequency  int
+	Count      int
+	Interval   int
+	ByDay      []int
+	ByMonthDay []int
+	ByYearDay  []int
+	ByMonth    []int
+	ByWeekNo   []int
+	ByHour     []int
+	BySetPos   []int
 }
 
 type Modifications struct {
@@ -261,63 +255,121 @@ func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName
 	return resp, nil
 }
 
-func GetEvent(newEvent *Event) *ical.Event {
+// tested TODO split to smaller
+func GetEvent(newEvent *Event) (*ical.Event, error) {
 	event := ical.NewEvent()
 	event.Name = newEvent.Name
+	err := SetSummary(event, newEvent)
+	if err != nil {
+		return nil, err
+	}
 	event.Props.SetText(ical.PropUID, newEvent.Uid)
-	event.Props.SetText(ical.PropSummary, newEvent.Summary)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.DateTimeStart)
-	event.Props.SetDateTime(ical.PropDateTimeEnd, newEvent.DateTimeEnd)
+	SetDTStart(event, newEvent)
+	SetDTEnd(event, newEvent)
 	for _, attendee := range newEvent.Attendees {
-		prop := ical.NewProp(ical.PropAttendee)
-		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
-		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
-		prop.Value = "mailto:" + attendee
-		event.Props.Add(prop)
+		AddAttendee(event, attendee)
 	}
-	if newEvent.Attendees != nil {
-		propOrg := ical.NewProp(ical.PropOrganizer)
-		propOrg.Value = "mailto:" + newEvent.Organizer
-		event.Props.Add(propOrg)
-	}
-	if newEvent.Alarm != nil {
-		alarm := ical.NewComponent(ical.CompAlarm)
-		alarm.Props.SetText(ical.PropAction, newEvent.Alarm.Action)
-		alarm.Props.SetText(ical.PropTrigger, newEvent.Alarm.Trigger)
-		event.Children = append(event.Children, alarm)
-	}
-	return event
+	SetOrganizer(event, newEvent)
+	AddAlarm(event, newEvent)
+	return event, nil
 }
 
-func GetTodo(newEvent *Event) *ical.Event {
+func SetSummary(old *ical.Event, new *Event) error {
+	// if empty, keep old value
+	if new.Uid == "" {
+		return nil
+	}
+	oldSummary, err := old.Props.Text(ical.PropSummary)
+	if err != nil {
+		return err
+	}
+	if oldSummary != new.Uid {
+		old.Props.SetText(ical.PropUID, new.Uid)
+	}
+	return nil
+}
+
+func SetDTStart(old *ical.Event, new *Event) {
+	// if empty, keep old value
+	if new.DateTimeStart.IsZero() {
+		return
+	}
+	oldDTStart := old.Props.Get(ical.PropDateTimeStart).Value
+	if oldDTStart != new.DateTimeStart.String() {
+		old.Props.SetDateTime(ical.PropDateTimeStart, new.DateTimeStart)
+	}
+}
+func SetDTEnd(old *ical.Event, new *Event) {
+	// if empty, keep old value
+	if new.DateTimeStart.IsZero() {
+		return
+	}
+	oldDTEnd := old.Props.Get(ical.PropDateTimeEnd).Value
+	if oldDTEnd != new.DateTimeEnd.String() {
+		old.Props.SetDateTime(ical.PropDateTimeEnd, new.DateTimeEnd)
+	}
+}
+
+func AddAttendee(old *ical.Event, attendee string) {
+	if attendee != "" {
+		return
+	}
+	prop := ical.NewProp(ical.PropAttendee)
+	prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
+	prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+	prop.Value = "mailto:" + attendee
+	old.Props.Add(prop)
+}
+
+func SetOrganizer(old *ical.Event, new *Event) {
+	if new.Attendees != nil {
+		propOrg := ical.NewProp(ical.PropOrganizer)
+		propOrg.Value = "mailto:" + new.Organizer
+		old.Props.Add(propOrg)
+	}
+}
+
+func AddAlarm(old *ical.Event, new *Event) {
+	if new.Alarm != nil {
+		alarm := ical.NewComponent(ical.CompAlarm)
+		alarm.Props.SetText(ical.PropAction, new.Alarm.Action)
+		alarm.Props.SetText(ical.PropTrigger, new.Alarm.Trigger)
+		old.Children = append(old.Children, alarm)
+	}
+
+}
+
+// tested TODO split to smaller
+func GetTodo(newEvent *Event) (*ical.Event, error) {
 	event := ical.NewEvent()
 	event.Name = newEvent.Name
 	event.Props.SetText(ical.PropUID, newEvent.Uid)
-	event.Props.SetText(ical.PropSummary, newEvent.Summary)
+	err := SetSummary(event, newEvent)
+	if err != nil {
+		return nil, err
+	}
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	event.Props.SetDateTime(ical.PropLastModified, time.Now().UTC()) // maybe server puts it
-	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.DateTimeStart)
+	SetDTStart(event, newEvent)
 	event.Props.SetDateTime(ical.PropDue, newEvent.DateTimeEnd)
 	event.Props.SetText(ical.PropStatus, "NEEDS-ACTION")
-	return event
+	return event, nil
 }
 
+// tested TODO split to smaller
 func GetRecurrentEvent(newRecEvent *ReccurentEvent) *ical.Event {
 	event := ical.NewEvent()
-	event.Name = newRecEvent.Name
-	event.Props.SetText(ical.PropUID, newRecEvent.Uid)
-	event.Props.SetText(ical.PropSummary, newRecEvent.Summary)
+	event.Name = newRecEvent.Event.Name
+	event.Props.SetText(ical.PropUID, newRecEvent.Event.Uid)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	event.Props.SetDateTime(ical.PropDateTimeStart, newRecEvent.DateTimeStart)
+	SetDTStart(event, newRecEvent.Event)
 
 	event.Props.SetRecurrenceRule(&rrule.ROption{
-		Freq: rrule.Frequency(newRecEvent.Frequency),
-		//Dtstart:    newRecEvent.DateTimeStart,
+		Freq:       rrule.Frequency(newRecEvent.Frequency),
 		Interval:   newRecEvent.Interval,
 		Wkst:       rrule.MO,
 		Count:      newRecEvent.Count,
-		Until:      newRecEvent.DateTimeUntil,
+		Until:      newRecEvent.Event.DateTimeEnd,
 		Bysetpos:   newRecEvent.BySetPos,
 		Bymonth:    newRecEvent.ByMonth,
 		Bymonthday: newRecEvent.ByMonthDay,
@@ -330,21 +382,14 @@ func GetRecurrentEvent(newRecEvent *ReccurentEvent) *ical.Event {
 		Byeaster:   []int{},
 	})
 
-	for _, attendee := range newRecEvent.Attendees {
-		prop := ical.NewProp(ical.PropAttendee)
-		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
-		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
-		prop.Value = "mailto:" + attendee
-		event.Props.Add(prop)
+	for _, attendee := range newRecEvent.Event.Attendees {
+		AddAttendee(event, attendee)
 	}
-	if newRecEvent.Attendees != nil {
-		propOrg := ical.NewProp(ical.PropOrganizer)
-		propOrg.Value = "mailto:" + newRecEvent.Organizer
-		event.Props.Add(propOrg)
-	}
+	SetOrganizer(event, newRecEvent.Event)
 	return event
 }
 
+// tested
 func CreateEvent(ctx context.Context, client *caldav.Client, homeset string, calendarName string, event *ical.Event) error {
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
@@ -417,6 +462,7 @@ func FindEventsWithExpand(ctx context.Context, httpClient webdav.HTTPClient, url
 	return nil
 }
 
+// tested
 func Delete(ctx context.Context, client *caldav.Client, path string) error {
 	err := client.RemoveAll(ctx, path)
 	if err != nil {
@@ -450,6 +496,7 @@ func FindEvent(ctx context.Context, client *caldav.Client, eventURL, eventUID st
 	return foundComponent, nil
 }
 
+// tested
 func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
 	eventURL := homeset[9:] + calendarName + "/" + eventPath + ".ics"
 	comp, err := FindEvent(ctx, client, eventURL, eventUID)
@@ -496,7 +543,8 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	return nil
 }
 
-func AddAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, calendarName, eventUID, eventPath string) error {
+// tested
+func PutAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, calendarName, eventUID, eventPath string) error {
 	eventURL := homeset[9:] + calendarName + "/" + eventPath + ".ics"
 	comp, err := FindEvent(ctx, client, eventURL, eventUID)
 	if err != nil {

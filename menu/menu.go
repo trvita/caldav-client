@@ -238,7 +238,11 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			}
 			switch newEvent.Name {
 			case "VTODO":
-				todo := mycal.GetTodo(newEvent)
+				todo, err := mycal.GetTodo(newEvent)
+				if err != nil {
+					RedLine(err)
+					break
+				}
 				err = mycal.CreateEvent(ctx, client, homeset, calendarName, todo)
 				if err != nil {
 					RedLine(err)
@@ -246,7 +250,11 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				}
 				BlueLine("Todo created\n")
 			case "VEVENT":
-				event := mycal.GetEvent(newEvent)
+				event, err := mycal.GetEvent(newEvent)
+				if err != nil {
+					RedLine(err)
+					break
+				}
 				err = mycal.CreateEvent(ctx, client, homeset, calendarName, event)
 				if err != nil {
 					RedLine(err)

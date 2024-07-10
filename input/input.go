@@ -177,7 +177,7 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		case "e":
 			action = ical.ParamEmail
 		}
-		
+
 	}
 	return &mycal.Event{
 		Name:          name,
@@ -201,7 +201,7 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 	var startDateTime, untilDateTime time.Time
 	var frequency, interval, count, ans int
 	name = "VEVENT"
-	uuid, err := uuid.NewUUID()
+	uid, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
@@ -336,11 +336,16 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		}
 
 	}
-	return &mycal.ReccurentEvent{Name: name,
-		Summary:       summary,
-		Uid:           uuid.String(),
-		DateTimeStart: startDateTime,
-		DateTimeUntil: untilDateTime,
+	return &mycal.ReccurentEvent{
+		Event : &mycal.Event{
+			Name : name,
+			Summary: summary,
+			Uid: uid.String(),
+			DateTimeStart: startDateTime,
+			DateTimeEnd: untilDateTime,
+			Attendees: attendees,
+			Organizer: organizer,
+		},
 		Frequency:     frequency,
 		Count:         count,
 		Interval:      interval,
@@ -350,7 +355,5 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		ByMonth:       byMonth,
 		ByWeekNo:      byWeekNo,
 		BySetPos:      bySetPos,
-		ByHour:        byHour,
-		Attendees:     attendees,
-		Organizer:     organizer}, nil
+		ByHour:        byHour,}, nil
 }
