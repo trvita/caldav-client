@@ -1,20 +1,18 @@
-package ui
+package menu
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
-	"github.com/google/uuid"
 	mycal "github.com/trvita/caldav-client/caldav"
+	"github.com/trvita/caldav-client/input"
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
@@ -34,66 +32,6 @@ func RedLine(err error) {
 	fmt.Printf("\u001b[31m%s\u001b[0m\n", err)
 }
 
-func GetString(r io.Reader, message string) (string, error) {
-	reader := bufio.NewReader(r)
-	if r == r {
-		fmt.Print(message)
-	}
-	str, err := reader.ReadString('\n')
-	str = strings.Trim(str, "\n")
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(str), nil
-}
-
-func GetCommands(comms string) []string {
-	commands := strings.Split(comms, "\n")
-	return commands
-}
-
-func GetInt(r io.Reader, message string) (int, error) {
-	var num int
-	reader := bufio.NewReader(r)
-	if r == r {
-		fmt.Print(message)
-	}
-	_, err := fmt.Fscanf(reader, "%d\n", &num)
-	if err != nil {
-		return 0, err
-	}
-	return num, nil
-}
-
-func GetInts(r io.Reader, message string) ([]int, error) {
-	reader := bufio.NewReader(r)
-	if r == r {
-		fmt.Print(message)
-	}
-	str, err := reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
-
-	str = strings.TrimSpace(str)
-	if str == "" {
-		return nil, err
-	}
-	numbersStr := strings.Split(str, ",")
-	var numbersInt []int
-
-	for _, numStr := range numbersStr {
-		numStr = strings.TrimSpace(numStr)
-		numInt, err := strconv.Atoi(numStr)
-		if err != nil {
-			return nil, err
-		}
-		numbersInt = append(numbersInt, numInt)
-	}
-
-	return numbersInt, nil
-}
-
 func GetUsernameBaikal(homeset string) string {
 	if homeset == "" {
 		return ""
@@ -110,254 +48,6 @@ func GetUsernameBaikal(homeset string) string {
 	return username
 }
 
-func GetEvent(r io.Reader) (*mycal.Event, error) {
-	var attendees []string
-	var summary, organizer, name, startDate, startTime, endDate, endTime string
-	var startDateTime, endDateTime time.Time
-	uid, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	summary, err = GetString(r, "Enter event summary: ")
-	if err != nil {
-		return nil, err
-	}
-	for {
-		name, err = GetString(r, "Enter event type [event, todo]: ")
-		if err != nil {
-			return nil, err
-		}
-		if strings.ToUpper(name) == "EVENT" {
-			name = "VEVENT"
-			break
-		}
-		if strings.ToUpper(name) == "TODO" {
-			name = "VTODO"
-			break
-		}
-	}
-	for {
-		startDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
-		if err != nil {
-			return nil, err
-		}
-		startTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
-		if err != nil {
-			return nil, err
-		}
-		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
-		if err != nil {
-			fmt.Println("invalid start date/time format")
-			continue
-		}
-		break
-	}
-	for {
-		endDate, err = GetString(r, "Enter event end date (YYYY.MM.DD): ")
-		if err != nil {
-			return nil, err
-		}
-		endTime, err = GetString(r, "Enter event end time (HH.MM.SS): ")
-		if err != nil {
-			return nil, err
-		}
-		endDateTime, err = time.Parse("2006.01.02 15.04.05", endDate+" "+endTime)
-		if err != nil {
-			fmt.Println("invalid end date/time format")
-			continue
-		}
-		break
-	}
-	for {
-		attendee, err := GetString(r, "Enter attendee email (or 0 to finish): ")
-		if err != nil {
-			return nil, err
-		}
-		if attendee == "0" {
-			break
-		}
-		attendees = append(attendees, attendee)
-	}
-	if attendees != nil {
-		organizer, err = GetString(r, "Enter organizer email: ")
-		if err != nil {
-			return nil, err
-		}
-
-	}
-	return &mycal.Event{
-		Name:          name,
-		Uid:           uid.String(),
-		Summary:       summary,
-		DateTimeStart: startDateTime,
-		DateTimeEnd:   endDateTime,
-		Attendees:     attendees,
-		Organizer:     organizer,
-	}, nil
-}
-
-func GetRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
-	var attendees []string
-	var byDay, byMonthDay, byYearDay, byMonth, byWeekNo, bySetPos, byHour []int
-	var summary, name, startDate, startTime, freq, untilDate, untilTime, organizer string
-	var startDateTime, untilDateTime time.Time
-	var frequency, interval, count, ans int
-	name = "VEVENT"
-	uuid, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-	summary, err = GetString(r, "Enter event summary: ")
-	if err != nil {
-		return nil, err
-	}
-	for {
-		startDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
-		if err != nil {
-			return nil, err
-		}
-		startTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
-		if err != nil {
-			return nil, err
-		}
-
-		startDateTime, err = time.Parse("2006.01.02 15.04.05", startDate+" "+startTime)
-		if err != nil {
-			fmt.Println("invalid start date/time format")
-			continue
-		}
-		break
-	}
-	cont := true
-	for cont {
-		freq, err = GetString(r, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
-		if err != nil {
-			return nil, err
-		}
-		switch strings.ToUpper(freq) {
-		case "Y":
-			frequency = 0
-			cont = false
-		case "MO":
-			frequency = 1
-			cont = false
-		case "W":
-			frequency = 2
-			cont = false
-		case "D":
-			frequency = 3
-			cont = false
-		case "H":
-			frequency = 4
-			cont = false
-		case "MI":
-			frequency = 5
-			cont = false
-		case "S":
-			frequency = 6
-			cont = false
-		}
-	}
-	interval, err = GetInt(r, "Enter interval: ")
-	if err != nil {
-		return nil, err
-	}
-	ans, err = GetInt(r, "Count, until or skip? [1/2/0]: ")
-	if err != nil {
-		return nil, err
-	}
-	switch ans {
-	case 1:
-		count, err = GetInt(r, "Enter count: ")
-		if err != nil {
-			return nil, err
-		}
-	case 2:
-		for {
-			untilDate, err = GetString(r, "Enter event start date (YYYY.MM.DD): ")
-			if err != nil {
-				return nil, err
-			}
-			untilTime, err = GetString(r, "Enter event start time (HH.MM.SS): ")
-			if err != nil {
-				return nil, err
-			}
-
-			untilDateTime, err = time.Parse("2006.01.02 15.04.05", untilDate+" "+untilTime)
-			if err != nil {
-				fmt.Println("invalid start date/time format")
-				continue
-			}
-			break
-		}
-	}
-
-	byDay, err = GetInts(r, "Enter by days [num of day in week, num of day in year]: ")
-	if err != nil {
-		return nil, err
-	}
-	byMonthDay, err = GetInts(r, "Enter by month days: ")
-	if err != nil {
-		return nil, err
-	}
-	byYearDay, err = GetInts(r, "Enter by year days: ")
-	if err != nil {
-		return nil, err
-	}
-	byMonth, err = GetInts(r, "Enter by months: ")
-	if err != nil {
-		return nil, err
-	}
-	byWeekNo, err = GetInts(r, "Enter by week numbers: ")
-	if err != nil {
-		return nil, err
-	}
-	bySetPos, err = GetInts(r, "Enter position by set: ")
-	if err != nil {
-		return nil, err
-	}
-	byHour, err = GetInts(r, "Enter by hour numbers")
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		attendee, err := GetString(r, "Enter attendee email (or 0 to finish): ")
-		if err != nil {
-			return nil, err
-		}
-		if attendee == "0" {
-			break
-		}
-		attendees = append(attendees, attendee)
-	}
-	if attendees != nil {
-		organizer, err = GetString(r, "Enter organizer email: ")
-		if err != nil {
-			return nil, err
-		}
-
-	}
-	return &mycal.ReccurentEvent{Name: name,
-		Summary:       summary,
-		Uid:           uuid.String(),
-		DateTimeStart: startDateTime,
-		DateTimeUntil: untilDateTime,
-		Frequency:     frequency,
-		Count:         count,
-		Interval:      interval,
-		ByDay:         byDay,
-		ByMonthDay:    byMonthDay,
-		ByYearDay:     byYearDay,
-		ByMonth:       byMonth,
-		ByWeekNo:      byWeekNo,
-		BySetPos:      bySetPos,
-		ByHour:        byHour,
-		Attendees:     attendees,
-		Organizer:     organizer}, nil
-}
-
 func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 	var partstat, delegateto, calendarName string
 	var err error
@@ -368,7 +58,7 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 	switch answer {
 	case 'y':
 		partstat = "ACCEPTED"
-		calendarName, err = GetString(r, "Enter which calendar event goes to: ")
+		calendarName, err = input.InputString(r, "Enter which calendar event goes to: ")
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +66,7 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 		partstat = "DECLINED"
 	case 'd':
 		partstat = string(ical.ParamDelegatedTo)
-		delegateto, err = GetString(r, "Enter who to delegate: ")
+		delegateto, err = input.InputString(r, "Enter who to delegate: ")
 		if err != nil {
 			return nil, err
 		}
@@ -466,7 +156,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 			}
 		case 2:
-			calendarName, err := GetString(r, "Enter calendar name to go to:")
+			calendarName, err := input.InputString(r, "Enter calendar name to go to:")
 			if err != nil {
 				return err
 			}
@@ -477,11 +167,11 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 			}
 			EventMenu(ctx, client, homeset, calendarName, r)
 		case 3:
-			calendarName, err := GetString(r, "Enter new calendar name: ")
+			calendarName, err := input.InputString(r, "Enter new calendar name: ")
 			if err != nil {
 				return err
 			}
-			description, err := GetString(r, "Enter new calendar description: ")
+			description, err := input.InputString(r, "Enter new calendar description: ")
 			if err != nil {
 				return err
 			}
@@ -496,7 +186,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				return err
 			}
 		case 5:
-			calendarName, err := GetString(r, "Enter calendar name to delete: ")
+			calendarName, err := input.InputString(r, "Enter calendar name to delete: ")
 			if err != nil {
 				return err
 			}
@@ -541,7 +231,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			PrintEvents(resp)
 			// create event or todo
 		case 2:
-			newEvent, err := GetEvent(r)
+			newEvent, err := input.InputEvent(r)
 			if err != nil {
 				RedLine(err)
 				break
@@ -565,7 +255,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				BlueLine("Event created\n")
 			}
 		case 3:
-			newRecEvent, err := GetRecurrentEvent(r)
+			newRecEvent, err := input.InputRecurrentEvent(r)
 			if err != nil {
 				RedLine(err)
 				break
@@ -581,12 +271,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// var startDateTime, endDateTime time.Time
 			// var err error
 			// for {
-			// 	startDate := GetString("Enter date to find from (YYYY.MM.DD): ")
+			// 	startDate := input.InputString("Enter date to find from (YYYY.MM.DD): ")
 			//if err != nil {
 			// 	return err
 			// }
 
-			// 	startTime := GetString("Enter time to find from (HH.MM.SS): ")
+			// 	startTime := input.InputString("Enter time to find from (HH.MM.SS): ")
 			// if err != nil {
 			// 	return err
 			// }
@@ -599,12 +289,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	break
 			// }
 			// for {
-			// 	endDate := GetString("Enter event end date (YYYY.MM.DD): ")
+			// 	endDate := input.InputString("Enter event end date (YYYY.MM.DD): ")
 			// if err != nil {
 			// 	return err
 			// }
 
-			// 	endTime := GetString("Enter event end time (HH.MM.SS): ")
+			// 	endTime := input.InputString("Enter event end time (HH.MM.SS): ")
 			// if err != nil {
 			// 	return err
 			// }
@@ -621,7 +311,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	RedLine(err)
 			// }
 		case 5:
-			eventUID, err := GetString(r, "Enter event path to delete (without .ics): ")
+			eventUID, err := input.InputString(r, "Enter event path to delete (without .ics): ")
 			if err != nil {
 				RedLine(err)
 				break
@@ -658,11 +348,11 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			}
 			PrintEvents(resp)
 		case 2:
-			eventUID, err := GetString(r, "Enter event UID:  ")
+			eventUID, err := input.InputString(r, "Enter event UID:  ")
 			if err != nil {
 				return err
 			}
-			eventPath, err := GetString(r, "Enter path to event: ")
+			eventPath, err := input.InputString(r, "Enter path to event: ")
 			if err != nil {
 				return err
 			}

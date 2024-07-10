@@ -57,6 +57,7 @@ type Modifications struct {
 	CalendarName string
 }
 
+// tested
 func ExtractNameFromEmail(email string) string {
 	emailParts := strings.Split(email, "@")
 	if len(emailParts) != 2 {
@@ -65,6 +66,7 @@ func ExtractNameFromEmail(email string) string {
 	return emailParts[0]
 }
 
+// tested
 func GetCredentials(r io.Reader) (string, string, error) {
 	reader := bufio.NewReader(r)
 	if r == os.Stdin {
@@ -95,6 +97,7 @@ func GetCredentials(r io.Reader) (string, string, error) {
 	return username, password, nil
 }
 
+// tested
 func CreateClient(url string, r io.Reader) (webdav.HTTPClient, *caldav.Client, string, context.Context, error) {
 	username, password, err := GetCredentials(r)
 
@@ -116,6 +119,7 @@ func CreateClient(url string, r io.Reader) (webdav.HTTPClient, *caldav.Client, s
 	return httpClient, client, principal, ctx, nil
 }
 
+// tested
 func ListCalendars(ctx context.Context, client *caldav.Client, homeset string) error {
 	calendars, err := client.FindCalendars(ctx, homeset)
 	if err != nil {
@@ -128,7 +132,7 @@ func ListCalendars(ctx context.Context, client *caldav.Client, homeset string) e
 	return nil
 }
 
-// add timezone in calendar creation
+// tested
 func CreateCalendar(ctx context.Context, httpClient webdav.HTTPClient, url, homeset, calendarName, description string) error {
 	timezone := `
 BEGIN:VTIMEZONE
@@ -174,6 +178,7 @@ END:VTIMEZONE`
 	return nil
 }
 
+// tested
 func FindCalendar(ctx context.Context, client *caldav.Client, homeset, calendarName string) error {
 	calendars, err := client.FindCalendars(ctx, homeset)
 	if err != nil {
@@ -188,6 +193,7 @@ func FindCalendar(ctx context.Context, client *caldav.Client, homeset, calendarN
 	return fmt.Errorf("calendar with name %s not found", calendarName)
 }
 
+// tested
 func GetEvents(ctx context.Context, client *caldav.Client, homeset, calendarName string) ([]caldav.CalendarObject, error) {
 	query := &caldav.CalendarQuery{
 		CompRequest: caldav.CalendarCompRequest{
@@ -217,6 +223,7 @@ func GetEvents(ctx context.Context, client *caldav.Client, homeset, calendarName
 	return resp, nil
 }
 
+// tested
 func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName string) ([]caldav.CalendarObject, error) {
 	query := &caldav.CalendarQuery{
 		CompRequest: caldav.CalendarCompRequest{

@@ -147,7 +147,7 @@ func TestFindCalendarFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestListEvents(t *testing.T) {
+func TestGetEvents(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -162,7 +162,7 @@ func TestListEvents(t *testing.T) {
 	assert.NotEmpty(t, resp)
 }
 
-func TestListEventsFail(t *testing.T) {
+func TestGetEventsFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -177,7 +177,7 @@ func TestListEventsFail(t *testing.T) {
 	assert.Empty(t, resp)
 }
 
-func TestListTodos(t *testing.T) {
+func TestGetTodos(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
@@ -192,7 +192,7 @@ func TestListTodos(t *testing.T) {
 	assert.NotEmpty(t, resp)
 }
 
-func TestListTodosFail(t *testing.T) {
+func TestGetTodosFail(t *testing.T) {
 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
