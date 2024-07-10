@@ -404,7 +404,7 @@ func Delete(ctx context.Context, client *caldav.Client, path string) error {
 
 func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string, mods *Modifications) error {
 	eventUrl := homeset[9:] + calendarName + "/" + eventPath + ".ics"
-	var newEventUrl string
+	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
 	obj, err := client.GetCalendarObject(ctx, eventUrl)
 	if err != nil {
 		return err
@@ -441,9 +441,8 @@ func ModifyEvent(ctx context.Context, client *caldav.Client, homeset, calendarNa
 			}
 		}
 		if mods.PartStat == "ACCEPTED" {
-			newEventUrl = homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
+			att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
 		}
-		att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
 	}
 	if !mods.LastModified.IsZero() {
 		foundComponent.Props.SetDateTime(ical.PropLastModified, mods.LastModified)
