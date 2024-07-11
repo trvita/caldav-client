@@ -1,4 +1,4 @@
-package caldav
+package mycal
 
 import (
 	"bufio"
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emersion/go-ical"
-	"github.com/emersion/go-webdav"
-	"github.com/emersion/go-webdav/caldav"
 	"github.com/teambition/rrule-go"
+	webdav "github.com/trvita/caldav-client-yandex"
+	"github.com/trvita/caldav-client-yandex/caldav"
+	"github.com/trvita/go-ical"
 	"golang.org/x/term"
 )
 
@@ -55,6 +55,7 @@ type ReccurentEvent struct {
 }
 
 type Modifications struct {
+	Email        string
 	PartStat     string
 	LastModified time.Time
 	DelegateTo   string
@@ -259,16 +260,19 @@ func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName
 func GetEvent(newEvent *Event) (*ical.Event, error) {
 	event := ical.NewEvent()
 	event.Name = newEvent.Name
-	err := SetSummary(event, newEvent)
-	if err != nil {
-		return nil, err
-	}
 	event.Props.SetText(ical.PropUID, newEvent.Uid)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	SetDTStart(event, newEvent)
-	SetDTEnd(event, newEvent)
+	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.DateTimeStart)
+	event.Props.SetDateTime(ical.PropDateTimeEnd, newEvent.DateTimeEnd)
+	// SetDTStart(event, newEvent)
+	// SetDTEnd(event, newEvent)
 	for _, attendee := range newEvent.Attendees {
-		AddAttendee(event, attendee)
+		//AddAttendee(event, attendee)
+		prop := ical.NewProp(ical.PropAttendee)
+		prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
+		prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+		prop.Value = "mailto:" + attendee
+		event.Props.Add(prop)
 	}
 	SetOrganizer(event, newEvent)
 	AddAlarm(event, newEvent)
@@ -290,26 +294,26 @@ func SetSummary(old *ical.Event, new *Event) error {
 	return nil
 }
 
-func SetDTStart(old *ical.Event, new *Event) {
-	// if empty, keep old value
-	if new.DateTimeStart.IsZero() {
-		return
-	}
-	oldDTStart := old.Props.Get(ical.PropDateTimeStart).Value
-	if oldDTStart != new.DateTimeStart.String() {
-		old.Props.SetDateTime(ical.PropDateTimeStart, new.DateTimeStart)
-	}
-}
-func SetDTEnd(old *ical.Event, new *Event) {
-	// if empty, keep old value
-	if new.DateTimeStart.IsZero() {
-		return
-	}
-	oldDTEnd := old.Props.Get(ical.PropDateTimeEnd).Value
-	if oldDTEnd != new.DateTimeEnd.String() {
-		old.Props.SetDateTime(ical.PropDateTimeEnd, new.DateTimeEnd)
-	}
-}
+// func SetDTStart(old *ical.Event, new *Event) {
+// 	// if empty, keep old value
+// 	if new.DateTimeStart.IsZero() {
+// 		return
+// 	}
+// 	oldDTStart := old.Props.Get(ical.PropDateTimeStart).Value
+// 	if oldDTStart != new.DateTimeStart.String() {
+// 		old.Props.SetDateTime(ical.PropDateTimeStart, new.DateTimeStart)
+// 	}
+// }
+// func SetDTEnd(old *ical.Event, new *Event) {
+// 	// if empty, keep old value
+// 	if new.DateTimeStart.IsZero() {
+// 		return
+// 	}
+// 	oldDTEnd := old.Props.Get(ical.PropDateTimeEnd).Value
+// 	if oldDTEnd != new.DateTimeEnd.String() {
+// 		old.Props.SetDateTime(ical.PropDateTimeEnd, new.DateTimeEnd)
+// 	}
+// }
 
 func AddAttendee(old *ical.Event, attendee string) {
 	if attendee != "" {
@@ -350,7 +354,8 @@ func GetTodo(newEvent *Event) (*ical.Event, error) {
 		return nil, err
 	}
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	SetDTStart(event, newEvent)
+	//SetDTStart(event, newEvent)
+	event.Props.SetDateTime(ical.PropDateTimeStart, newEvent.DateTimeStart)
 	event.Props.SetDateTime(ical.PropDue, newEvent.DateTimeEnd)
 	event.Props.SetText(ical.PropStatus, "NEEDS-ACTION")
 	return event, nil
@@ -362,7 +367,9 @@ func GetRecurrentEvent(newRecEvent *ReccurentEvent) *ical.Event {
 	event.Name = newRecEvent.Event.Name
 	event.Props.SetText(ical.PropUID, newRecEvent.Event.Uid)
 	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
-	SetDTStart(event, newRecEvent.Event)
+	event.Props.SetDateTime(ical.PropDateTimeStart, newRecEvent.Event.DateTimeStart)
+
+	//SetDTStart(event, newRecEvent.Event)
 
 	event.Props.SetRecurrenceRule(&rrule.ROption{
 		Freq:       rrule.Frequency(newRecEvent.Frequency),
@@ -506,6 +513,7 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
 
 	// TODO fix, because takes first attendee, can be wrong email
+	// how to extract email from client??
 	att := comp.Props.Get(ical.PropAttendee)
 	if att == nil {
 		return fmt.Errorf("attendee property not found in event with UID %s", eventUID)
@@ -529,6 +537,7 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	if mods.DelegateTo != "" {
 		comp.Props.SetText(ical.ParamDelegatedTo, mods.DelegateTo)
 	}
+	comp.Props.SetDateTime(ical.PropLastModified, time.Now())
 
 	calendar := ical.NewCalendar()
 	calendar.Props.SetText(ical.PropVersion, "2.0")
@@ -568,4 +577,9 @@ func PutAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, 
 		return err
 	}
 	return nil
+}
+
+// TODO write func that requests attendees aka attendee syncronization
+func LookUpAttendees() {
+
 }

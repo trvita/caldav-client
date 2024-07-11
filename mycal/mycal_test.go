@@ -1,16 +1,17 @@
-package caldav
+package mycal
 
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/emersion/go-ical"
-	"github.com/emersion/go-webdav/caldav"
 	"github.com/stretchr/testify/assert"
+	"github.com/trvita/caldav-client-yandex/caldav"
+	"github.com/trvita/go-ical"
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
@@ -30,9 +31,9 @@ var nonExistingCalendarName = "wrong"
 var inboxCalendarName = "inbox"
 var modCalendarName = "mod"
 
-var validUID = "uid"
+var validUID = "valid"
 var invalidUID = "invalid"
-var modificateUID = "moduid" // depends on user sending invitation
+var modificateUID = "modificate" // depends on user sending invitation
 
 func TestGetCredentials(t *testing.T) {
 	input := bytes.NewBufferString("testuser\ntestpassword\n")
@@ -304,7 +305,7 @@ func TestAttend_CreateEventWithAttendee(t *testing.T) {
 		Uid:           modificateUID,
 		DateTimeStart: time.Now(),
 		DateTimeEnd:   time.Now(),
-		Attendees:     []string{testEmail2},
+		Attendees:     []string{testEmail2, "likh.lyudmila1@yandex.ru"},
 		Organizer:     testEmail1,
 	}
 	event, err := GetEvent(e)
@@ -319,7 +320,7 @@ func TestAttend_Reply(t *testing.T) {
 	var principal, homeset string
 	var ctx context.Context
 	var err error
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials2))
+	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString("ya\niamyandex\n"))
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 	assert.NotEmpty(t, principal)
@@ -328,12 +329,6 @@ func TestAttend_Reply(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, homeset)
 
-	var mods *Modifications = &Modifications{
-		PartStat:     "ACCEPTED",
-		LastModified: time.Now(),
-		DelegateTo:   "",
-		CalendarName: modCalendarName,
-	}
 	resp, err := GetEvents(ctx, client, homeset, inboxCalendarName)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
@@ -348,11 +343,16 @@ func TestAttend_Reply(t *testing.T) {
 		}
 	}
 
-	path := r.Path
-	path = path[34:]
-	path = path[:45]
+	eventFileName := r.Path
+	eventFileName = eventFileName[len(homeset+inboxCalendarName+"/") : len(eventFileName)-len(".ics")]
 
-	err = ModifyAttendance(ctx, client, homeset, inboxCalendarName, modificateUID, path, mods)
+	var mods *Modifications = &Modifications{
+		PartStat:     "ACCEPTED",
+		LastModified: time.Now(),
+		DelegateTo:   "",
+		CalendarName: modCalendarName,
+	}
+	err = ModifyAttendance(ctx, client, homeset, inboxCalendarName, modificateUID, eventFileName, mods)
 	assert.NoError(t, err)
 
 }
@@ -372,7 +372,7 @@ func TestAttend_CheckStatus(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, homeset)
 
-	resp, err = GetEvents(ctx, client, homeset, inboxCalendarName)
+	resp, err = GetEvents(ctx, client, homeset, modCalendarName)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 	for _, r := range resp {
@@ -474,4 +474,34 @@ func TestAddAttendee(t *testing.T) {
 
 	err = PutAttendee(ctx, client, "likh.lyudmila1@yandex.ru", homeset, modCalendarName, modificateUID, modificateUID)
 	assert.NoError(t, err)
+}
+
+func TestAttendees(t *testing.T) {
+	var client *caldav.Client
+	var ctx context.Context
+	var err error
+
+	_, client, _, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+	assert.NotNil(t, ctx)
+
+	comp, err := FindEvent(ctx, client, "/dav.php/calendars/testuser/mod/27518c07-3f45-11ef-a928-80d21df4779b.ics", "27518c07-3f45-11ef-a928-80d21df4779b")
+	if err != nil {
+		fmt.Printf("1 "+"%s\n", err)
+		return
+	}
+	// props - map [string][]prop
+	// prop - name, params, value
+	// params- map [string][]string
+
+	attendeeProp := comp.Props.Get(ical.PropAttendee)
+	fmt.Printf("attendee prop name: %s\n", attendeeProp.Name)
+	fmt.Printf("value type: %v\n", attendeeProp.ValueType())
+	addr, err := comp.Props.URI(ical.PropAttendee)
+	if err != nil {
+		fmt.Printf("2 %s\n", err)
+	}
+	fmt.Println(addr)
+
 }

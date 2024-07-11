@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emersion/go-ical"
-	"github.com/emersion/go-webdav"
-	"github.com/emersion/go-webdav/caldav"
-	mycal "github.com/trvita/caldav-client/caldav"
+	webdav "github.com/trvita/caldav-client-yandex"
+	"github.com/trvita/caldav-client-yandex/caldav"
+	
+	"github.com/trvita/caldav-client/mycal"
 	"github.com/trvita/caldav-client/input"
+	"github.com/trvita/go-ical"
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
@@ -49,10 +50,14 @@ func GetUsernameBaikal(homeset string) string {
 }
 
 func GetModifications(r io.Reader) (*mycal.Modifications, error) {
-	var partstat, delegateto, calendarName string
+	var partstat, delegateto, calendarName, email string
 	var err error
 	var answer byte
 
+	email, err = input.InputString(r, "Enter your email: ")
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println("Accept, decline, delegate event? [y, n, d]")
 	fmt.Scan(&answer)
 	switch answer {
@@ -72,6 +77,7 @@ func GetModifications(r io.Reader) (*mycal.Modifications, error) {
 		}
 	}
 	return &mycal.Modifications{
+		Email:        email,
 		PartStat:     partstat,
 		DelegateTo:   "mailto:" + delegateto,
 		CalendarName: calendarName,

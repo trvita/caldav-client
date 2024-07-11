@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emersion/go-ical"
 	"github.com/google/uuid"
-	mycal "github.com/trvita/caldav-client/caldav"
+	"github.com/trvita/caldav-client/mycal"
+	"github.com/trvita/go-ical"
 )
 
 func InputString(r io.Reader, message string) (string, error) {
@@ -337,23 +337,23 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 
 	}
 	return &mycal.ReccurentEvent{
-		Event : &mycal.Event{
-			Name : name,
-			Summary: summary,
-			Uid: uid.String(),
+		Event: &mycal.Event{
+			Name:          name,
+			Summary:       summary,
+			Uid:           uid.String(),
 			DateTimeStart: startDateTime,
-			DateTimeEnd: untilDateTime,
-			Attendees: attendees,
-			Organizer: organizer,
+			DateTimeEnd:   untilDateTime,
+			Attendees:     attendees,
+			Organizer:     organizer,
 		},
-		Frequency:     frequency,
-		Count:         count,
-		Interval:      interval,
-		ByDay:         byDay,
-		ByMonthDay:    byMonthDay,
-		ByYearDay:     byYearDay,
-		ByMonth:       byMonth,
-		ByWeekNo:      byWeekNo,
-		BySetPos:      bySetPos,
-		ByHour:        byHour,}, nil
+		Frequency:  frequency,
+		Count:      count,
+		Interval:   interval,
+		ByDay:      byDay,
+		ByMonthDay: byMonthDay,
+		ByYearDay:  byYearDay,
+		ByMonth:    byMonth,
+		ByWeekNo:   byWeekNo,
+		BySetPos:   bySetPos,
+		ByHour:     byHour}, nil
 }
