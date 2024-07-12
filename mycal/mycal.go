@@ -228,6 +228,38 @@ func GetEvents(ctx context.Context, client *caldav.Client, homeset, calendarName
 	return resp, nil
 }
 
+func GetByUid(ctx context.Context, client *caldav.Client, homeset, calendarName, uid string) ([]caldav.CalendarObject, error) {
+	query := &caldav.CalendarQuery{
+		CompRequest: caldav.CalendarCompRequest{
+			Name:  "VCALENDAR",
+			Comps: []caldav.CalendarCompRequest{{
+				Name:     "VEVENT",
+				AllProps: true,
+			}},
+		},
+		CompFilter: caldav.CompFilter{
+			Name: "VCALENDAR",
+			Comps: []caldav.CompFilter{{
+				Name: "VEVENT",
+				Props: []caldav.PropFilter{{
+					Name:      ical.PropUID,
+					TextMatch: &caldav.TextMatch{Text: uid},
+				}},
+			}},
+		},
+	}
+
+	calendarURL := homeset + calendarName
+	resp, err := client.QueryCalendar(ctx, calendarURL, query)
+	if err != nil {
+		return nil, fmt.Errorf("error getting calendar query: %v", err)
+	}
+	if len(resp) == 0 {
+		return nil, fmt.Errorf("no events found with UID %s", uid)
+	}
+	return resp, nil
+}
+
 // tested
 func ListTodos(ctx context.Context, client *caldav.Client, homeset, calendarName string) ([]caldav.CalendarObject, error) {
 	query := &caldav.CalendarQuery{
@@ -510,14 +542,19 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	if err != nil {
 		return err
 	}
-	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
+	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventUID + ".ics"
 
-	// TODO fix, because takes first attendee, can be wrong email
-	// how to extract email from client??
-	att := comp.Props.Get(ical.PropAttendee)
-	if att == nil {
-		return fmt.Errorf("attendee property not found in event with UID %s", eventUID)
+	var att ical.Prop
+	for _, att = range comp.Props.Values(ical.PropAttendee) {
+		uri, err := att.URI()
+		if err != nil {
+			return err
+		}
+		if uri.String() == mods.Email {
+			break
+		}
 	}
+
 	if mods.PartStat != "" {
 		if mods.PartStat == "DECLINED" {
 			err = Delete(ctx, client, eventURL)
@@ -557,7 +594,7 @@ func PutAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, 
 	eventURL := homeset[9:] + calendarName + "/" + eventPath + ".ics"
 	comp, err := FindEvent(ctx, client, eventURL, eventUID)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	prop := ical.NewProp(ical.PropAttendee)

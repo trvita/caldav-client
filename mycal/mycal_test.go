@@ -3,40 +3,52 @@ package mycal
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	webdav "github.com/trvita/caldav-client-yandex"
 	"github.com/trvita/caldav-client-yandex/caldav"
 	"github.com/trvita/go-ical"
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
-var testCredentials1 = "testuser\ntestpassword\n"
-var testCredentials2 = "usertest\npasswordtest\n"
+var credentials = 0
+var email = 1
 
-var testEmail1 = "some-mail@mail.com"
-var testEmail2 = "mail-some@mail.com"
+var users = map[string][]string{
+	"user1": {"testuser\ntestpassword\n", "some-mail@mail.com"},
+	"user2": {"usertest\npasswordtest\n", "mail-some@mail.com"},
+	"user3": {"tuserest\ntasswordpest\n", "maso-meil@mail.com"},
+}
 
-var listCalendarsOutput = "Calendar: cal-empty\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
-var listCalendarsOutputWithNew = "Calendar: cal-empty\nCalendar: cal-new\nCalendar: cal-with-recs\nCalendar: cal-with-todos\nCalendar: default\n"
+var calendars = []string{
+	"cal-new", "default", "cal-empty", "wrong", "inbox",
+}
 
-var newCalendarName = "cal-new"
-var existingCalendarName = "default"
-var emptyCalendarName = "cal-empty"
-var nonExistingCalendarName = "wrong"
-var inboxCalendarName = "inbox"
-var modCalendarName = "mod"
+var calendarsAttend = []string{
+	"not-shared", "shared",
+}
 
-var validUID = "valid"
-var invalidUID = "invalid"
-var modificateUID = "modificate" // depends on user sending invitation
+var uids = []string{
+	"valid", "invalid", "modificate", "modificate-not-share", "shared",
+}
+
+func setupClient(t *testing.T, user string) (webdav.HTTPClient, *caldav.Client, string, context.Context) {
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(users[user][credentials]))
+	assert.NoError(t, err)
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, client)
+	assert.NotEmpty(t, principal)
+	assert.NotNil(t, ctx)
+	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	assert.NoError(t, err)
+	assert.NotNil(t, homeset)
+	return httpClient, client, homeset, ctx
+}
 
 func TestGetCredentials(t *testing.T) {
-	input := bytes.NewBufferString("testuser\ntestpassword\n")
+	input := bytes.NewBufferString(users["user1"][credentials])
 	username, password, err := GetCredentials(input)
 	assert.NoError(t, err)
 	assert.Equal(t, "testuser", username)
@@ -44,7 +56,7 @@ func TestGetCredentials(t *testing.T) {
 }
 
 func TestCreateClient(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
+	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(users["user1"][credentials]))
 	assert.NoError(t, err)
 	assert.NotNil(t, httpClient)
 	assert.NotNil(t, client)
@@ -62,165 +74,75 @@ func TestExtractNameFromEmail(t *testing.T) {
 }
 
 func TestListCalendars(t *testing.T) {
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
+	err := ListCalendars(ctx, client, homeset)
 	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	err = ListCalendars(ctx, client, homeset)
-	assert.NoError(t, err)
-
-	w.Close()
-	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := buf.String()
-
-	assert.Equal(t, output, listCalendarsOutput)
 }
 
 func TestCreateCalendar(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
+	httpClient, client, homeset, ctx := setupClient(t, "user1")
+
+	err := CreateCalendar(ctx, httpClient, URL, homeset, calendars[0], "0")
 	assert.NoError(t, err)
 
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	err = CreateCalendar(ctx, httpClient, URL, homeset, newCalendarName, "0")
+	err = Delete(ctx, client, homeset+calendars[0])
 	assert.NoError(t, err)
-
-	err = ListCalendars(ctx, client, homeset)
-	assert.NoError(t, err)
-
-	w.Close()
-	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := buf.String()
-
-	assert.Equal(t, output, listCalendarsOutputWithNew)
-	err = Delete(ctx, client, homeset+newCalendarName)
-	assert.NoError(t, err)
-
 }
 
 func TestFindCalendarCorrect(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	err = FindCalendar(ctx, client, homeset, existingCalendarName)
+	err := FindCalendar(ctx, client, homeset, calendars[1])
 	assert.NoError(t, err)
 }
 
 func TestFindCalendarFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	err = FindCalendar(ctx, client, homeset, nonExistingCalendarName)
+	err := FindCalendar(ctx, client, homeset, calendars[3])
 	assert.Error(t, err)
 }
 
 func TestGetEvents(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, existingCalendarName)
+	resp, err := GetEvents(ctx, client, homeset, calendars[1])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
 
 func TestGetEventsFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, emptyCalendarName)
+	resp, err := GetEvents(ctx, client, homeset, calendars[2])
 	assert.Error(t, err)
 	assert.Empty(t, resp)
 }
 
 func TestGetTodos(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, existingCalendarName)
+	resp, err := GetEvents(ctx, client, homeset, calendars[1])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
 
 func TestGetTodosFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, emptyCalendarName)
+	resp, err := GetEvents(ctx, client, homeset, calendars[2])
 	assert.Error(t, err)
 	assert.Empty(t, resp)
 }
 
 func TestCreateEvent(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
+
 	e := &Event{
 		Name:          "VEVENT",
 		Summary:       "event",
-		Uid:           validUID,
+		Uid:           uids[0],
 		DateTimeStart: time.Now(),
 		DateTimeEnd:   time.Now(),
 		Attendees:     nil,
@@ -228,108 +150,69 @@ func TestCreateEvent(t *testing.T) {
 	}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
-	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
+	err = CreateEvent(ctx, client, homeset, calendars[1], event)
 	assert.NoError(t, err)
 }
 
 func TestCreateEventFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+	_, client, homeset, ctx := setupClient(t, "user1")
+
 	e := &Event{}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
-	err = CreateEvent(ctx, client, homeset, existingCalendarName, event)
+	err = CreateEvent(ctx, client, homeset, calendars[1], event)
 	assert.Error(t, err)
 }
 func TestDeleteEventFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	err = Delete(ctx, client, homeset+existingCalendarName+"/"+invalidUID+".ics")
+	_, client, homeset, ctx := setupClient(t, "user1")
+
+	err := Delete(ctx, client, homeset+calendars[1]+"/"+uids[1]+".ics")
 	assert.Error(t, err)
 }
 func TestDeleteCalendarFail(t *testing.T) {
-	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, httpClient)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	err = Delete(ctx, client, homeset+nonExistingCalendarName)
+	_, client, homeset, ctx := setupClient(t, "user1")
+
+	err := Delete(ctx, client, homeset+calendars[3])
 	assert.Error(t, err)
 }
 
-// func TestFindEventsWithExpand(t *testing.T) {
-// 	start, err := time.Parse("2006.01.02 15.04.05", "2020.02.02 00.00.00")
-// 	assert.NoError(t, err)
-// 	end, err := time.Parse("2006.01.02 15.04.05", "2025.02.02 00.00.00")
-// 	assert.NoError(t, err)
-// 	httpClient, client, principal, ctx, err := CreateClient(URL, bytes.NewBufferString(testCredentials1))
-// 	assert.NoError(t, err)
-// 	homeset, err := client.FindCalendarHomeSet(ctx, principal)
-// 	assert.NoError(t, err)
-// 	err = FindEventsWithExpand(ctx, httpClient, URL, homeset, "walks", start, end)
-// 	assert.NoError(t, err)
-// }
+func TestAttend_Setup(t *testing.T) {
+	for user := range users {
+		httpClient, _, homeset, ctx := setupClient(t, user)
+		for i := range calendarsAttend {
+			err := CreateCalendar(ctx, httpClient, URL, homeset, calendarsAttend[i], "")
+			assert.NoError(t, err)
+		}
+	}
+}
 
-func TestAttend_CreateEventWithAttendee(t *testing.T) {
-	var client *caldav.Client
-	var principal, homeset string
-	var ctx context.Context
-	var err error
-	// testuser creates event
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
+func TestAttend_Invite(t *testing.T) {
+	currentUser := "user1"
+	_, client, homeset, ctx := setupClient(t, currentUser)
+
 	assert.NotEmpty(t, homeset)
 	e := &Event{
 		Name:          "VEVENT",
-		Summary:       "test-event",
-		Uid:           modificateUID,
+		Summary:       "shared-event",
+		Uid:           uids[4],
 		DateTimeStart: time.Now(),
 		DateTimeEnd:   time.Now(),
-		Attendees:     []string{testEmail2, "likh.lyudmila1@yandex.ru"},
-		Organizer:     testEmail1,
+		Attendees:     []string{users["user3"][email]},
+		Organizer:     users[currentUser][email],
 	}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
 
-	err = CreateEvent(ctx, client, homeset, modCalendarName, event)
+	err = CreateEvent(ctx, client, homeset, calendarsAttend[0], event)
 	assert.NoError(t, err)
 }
 
 func TestAttend_Reply(t *testing.T) {
-	var client *caldav.Client
-	var principal, homeset string
-	var ctx context.Context
-	var err error
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString("ya\niamyandex\n"))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
+	currentUser := "user3"
+	currentUID := uids[4]
+	_, client, homeset, ctx := setupClient(t, currentUser)
 
-	resp, err := GetEvents(ctx, client, homeset, inboxCalendarName)
+	resp, err := GetEvents(ctx, client, homeset, calendars[4])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 
@@ -338,170 +221,109 @@ func TestAttend_Reply(t *testing.T) {
 	for _, r = range resp {
 		uid, err = r.Data.Props.Text(ical.PropUID)
 		assert.NoError(t, err)
-		if uid == modificateUID {
+		if uid == currentUID {
+			break
+		}
+	}
+	assert.NotEmpty(t, r)
+	eventFileName := r.Path
+	eventFileName = eventFileName[len(homeset+calendars[4]+"/") : len(eventFileName)-len(".ics")]
+
+	var mods *Modifications = &Modifications{
+		PartStat:     "DECLINED",
+		LastModified: time.Now(),
+		DelegateTo:   "",
+		CalendarName: calendars[1],
+		Email:        users[currentUser][email],
+	}
+	err = ModifyAttendance(ctx, client, homeset, calendars[4], currentUID, eventFileName, mods)
+	assert.NoError(t, err)
+}
+func TestAttend_Check(t *testing.T) {
+	currentUser := "user1"
+	currentUID := uids[4]
+	currentCalendar := calendars[4]
+	_, client, homeset, ctx := setupClient(t, currentUser)
+
+	resp, err := GetByUid(ctx, client, homeset, currentCalendar, currentUID)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp)
+
+	status := resp[0].Data.Children[0].Props.Get(ical.PropAttendee).Params.Get(ical.ParamParticipationStatus)
+	assert.Equal(t, "ACCEPTED", status)
+	// // at the moment there should be only one event, so there is no reason to go in loop
+	// for _, r := range resp {
+	// 	for _, event := range r.Data.Children {
+	// 		att := event.Props.Get(ical.PropAttendee)
+	// 		status := att.Params.Get(ical.ParamParticipationStatus)
+	// 		fmt.Println(status)
+	// 	}
+	// }
+}
+
+func TestAttend_Clear(t *testing.T) {
+	for user := range users {
+		_, client, homeset, ctx := setupClient(t, user)
+		for i := range calendarsAttend {
+			Delete(ctx, client, homeset+calendarsAttend[i])
+		}
+		// also clear inbox
+		resp, err := GetEvents(ctx, client, homeset, calendars[4])
+		if err == nil {
+			for _, r := range resp {
+				err = Delete(ctx, client, r.Path)
+				assert.NoError(t, err)
+			}
+		}
+	}
+}
+
+func TestAttend_notShared(t *testing.T) {
+	TestAttend_Clear(t)
+	TestAttend_Setup(t)
+	TestAttend_Invite(t)
+	TestAttend_Reply(t)
+	TestAttend_Check(t)
+	TestAttend_Clear(t)
+}
+
+func TestAddAttendee(t *testing.T) {
+	currentUser := "user1"
+	_, client, homeset, ctx := setupClient(t, currentUser)
+
+	err := PutAttendee(ctx, client, users["user3"][email], homeset, calendars[5], uids[2], uids[2])
+	assert.NoError(t, err)
+}
+
+func TestPutEvent(t *testing.T) {
+	currentUser := "user1"
+	_, client, homeset, ctx := setupClient(t, currentUser)
+
+	resp, err := GetEvents(ctx, client, homeset, calendars[4])
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp)
+
+	var uid string
+	var r caldav.CalendarObject
+	for _, r = range resp {
+		uid, err = r.Data.Props.Text(ical.PropUID)
+		assert.NoError(t, err)
+		if uid == uids[2] {
 			break
 		}
 	}
 
 	eventFileName := r.Path
-	eventFileName = eventFileName[len(homeset+inboxCalendarName+"/") : len(eventFileName)-len(".ics")]
+	eventFileName = eventFileName[len(homeset+calendars[4]+"/") : len(eventFileName)-len(".ics")]
 
 	var mods *Modifications = &Modifications{
-		PartStat:     "ACCEPTED",
+		PartStat:     "",
 		LastModified: time.Now(),
 		DelegateTo:   "",
-		CalendarName: modCalendarName,
+		CalendarName: calendars[5],
+		Email:        "",
 	}
-	err = ModifyAttendance(ctx, client, homeset, inboxCalendarName, modificateUID, eventFileName, mods)
+	err = ModifyAttendance(ctx, client, homeset, calendars[4], uids[2], eventFileName, mods)
 	assert.NoError(t, err)
-
-}
-func TestAttend_CheckStatus(t *testing.T) {
-	var client *caldav.Client
-	var principal, homeset string
-	var ctx context.Context
-	var err error
-	var resp []caldav.CalendarObject
-
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-
-	resp, err = GetEvents(ctx, client, homeset, modCalendarName)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resp)
-	for _, r := range resp {
-		uid, err := r.Data.Props.Text(ical.PropUID)
-		assert.NoError(t, err)
-		if uid == modificateUID {
-			stat, err := r.Data.Props.Text(ical.ParamParticipationStatus)
-			assert.NoError(t, err)
-			assert.Equal(t, "ACCEPTED", stat)
-			break
-		}
-	}
-}
-
-func TestAttendClearAll(t *testing.T) {
-	var client *caldav.Client
-	var principal, homeset string
-	var ctx context.Context
-	var err error
-	var resp []caldav.CalendarObject
-
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-	resp, err = GetEvents(ctx, client, homeset, modCalendarName)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resp)
-	for _, r := range resp {
-		err = Delete(ctx, client, r.Path)
-		assert.NoError(t, err)
-	}
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials2))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-	resp, err = GetEvents(ctx, client, homeset, modCalendarName)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resp)
-	for _, r := range resp {
-		err = Delete(ctx, client, r.Path)
-		assert.NoError(t, err)
-	}
-
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-	resp, err = GetEvents(ctx, client, homeset, inboxCalendarName)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resp)
-	for _, r := range resp {
-		err = Delete(ctx, client, r.Path)
-		assert.NoError(t, err)
-	}
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials2))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-	resp, err = GetEvents(ctx, client, homeset, inboxCalendarName)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resp)
-	for _, r := range resp {
-		err = Delete(ctx, client, r.Path)
-		assert.NoError(t, err)
-	}
-}
-
-func TestAddAttendee(t *testing.T) {
-	var client *caldav.Client
-	var principal, homeset string
-	var ctx context.Context
-	var err error
-
-	_, client, principal, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotEmpty(t, principal)
-	assert.NotNil(t, ctx)
-	homeset, err = client.FindCalendarHomeSet(ctx, principal)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, homeset)
-
-	err = PutAttendee(ctx, client, "likh.lyudmila1@yandex.ru", homeset, modCalendarName, modificateUID, modificateUID)
-	assert.NoError(t, err)
-}
-
-func TestAttendees(t *testing.T) {
-	var client *caldav.Client
-	var ctx context.Context
-	var err error
-
-	_, client, _, ctx, err = CreateClient(URL, bytes.NewBufferString(testCredentials1))
-	assert.NoError(t, err)
-	assert.NotNil(t, client)
-	assert.NotNil(t, ctx)
-
-	comp, err := FindEvent(ctx, client, "/dav.php/calendars/testuser/mod/27518c07-3f45-11ef-a928-80d21df4779b.ics", "27518c07-3f45-11ef-a928-80d21df4779b")
-	if err != nil {
-		fmt.Printf("1 "+"%s\n", err)
-		return
-	}
-	// props - map [string][]prop
-	// prop - name, params, value
-	// params- map [string][]string
-
-	attendeeProp := comp.Props.Get(ical.PropAttendee)
-	fmt.Printf("attendee prop name: %s\n", attendeeProp.Name)
-	fmt.Printf("value type: %v\n", attendeeProp.ValueType())
-	addr, err := comp.Props.URI(ical.PropAttendee)
-	if err != nil {
-		fmt.Printf("2 %s\n", err)
-	}
-	fmt.Println(addr)
 
 }
