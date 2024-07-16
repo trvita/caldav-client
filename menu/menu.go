@@ -124,7 +124,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				RedLine(err)
 			}
 		case 2:
-			calendarName, err := input.InputString(r, "Enter calendar name to go to:")
+			calendarName, err := input.String(r, "Enter calendar name to go to:")
 			if err != nil {
 				return err
 			}
@@ -135,11 +135,11 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 			}
 			EventMenu(ctx, client, homeset, calendarName, r)
 		case 3:
-			calendarName, err := input.InputString(r, "Enter new calendar name: ")
+			calendarName, err := input.String(r, "Enter new calendar name: ")
 			if err != nil {
 				return err
 			}
-			description, err := input.InputString(r, "Enter new calendar description: ")
+			description, err := input.String(r, "Enter new calendar description: ")
 			if err != nil {
 				return err
 			}
@@ -154,7 +154,7 @@ func CalendarMenu(httpClient webdav.HTTPClient, client *caldav.Client, principal
 				return err
 			}
 		case 5:
-			calendarName, err := input.InputString(r, "Enter calendar name to delete: ")
+			calendarName, err := input.String(r, "Enter calendar name to delete: ")
 			if err != nil {
 				return err
 			}
@@ -199,7 +199,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			PrintEvents(resp)
 			// create event or todo
 		case 2:
-			newEvent, err := input.InputEvent(r)
+			newEvent, err := input.Event(r)
 			if err != nil {
 				RedLine(err)
 				break
@@ -231,7 +231,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				BlueLine("Event created\n")
 			}
 		case 3:
-			newRecEvent, err := input.InputRecurrentEvent(r)
+			newRecEvent, err := input.RecurrentEvent(r)
 			if err != nil {
 				RedLine(err)
 				break
@@ -247,12 +247,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// var startDateTime, endDateTime time.Time
 			// var err error
 			// for {
-			// 	startDate := input.InputString("Enter date to find from (YYYY.MM.DD): ")
+			// 	startDate := input.String("Enter date to find from (YYYY.MM.DD): ")
 			//if err != nil {
 			// 	return err
 			// }
 
-			// 	startTime := input.InputString("Enter time to find from (HH.MM.SS): ")
+			// 	startTime := input.String("Enter time to find from (HH.MM.SS): ")
 			// if err != nil {
 			// 	return err
 			// }
@@ -265,12 +265,12 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	break
 			// }
 			// for {
-			// 	endDate := input.InputString("Enter event end date (YYYY.MM.DD): ")
+			// 	endDate := input.String("Enter event end date (YYYY.MM.DD): ")
 			// if err != nil {
 			// 	return err
 			// }
 
-			// 	endTime := input.InputString("Enter event end time (HH.MM.SS): ")
+			// 	endTime := input.String("Enter event end time (HH.MM.SS): ")
 			// if err != nil {
 			// 	return err
 			// }
@@ -287,7 +287,7 @@ func EventMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			// 	RedLine(err)
 			// }
 		case 5:
-			eventUID, err := input.InputString(r, "Enter event path to delete (without .ics): ")
+			eventUID, err := input.String(r, "Enter event path to delete (without .ics): ")
 			if err != nil {
 				RedLine(err)
 				break
@@ -324,15 +324,15 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			}
 			PrintEvents(resp)
 		case 2:
-			eventUID, err := input.InputString(r, "Enter event UID:  ")
+			eventUID, err := input.String(r, "Enter event UID:  ")
 			if err != nil {
 				return err
 			}
-			eventPath, err := input.InputString(r, "Enter path to event: ")
+			eventPath, err := input.String(r, "Enter path to event: ")
 			if err != nil {
 				return err
 			}
-			mods, err := input.InputModifications(r)
+			mods, err := input.Modifications(r)
 			if err != nil {
 				return err
 			}

@@ -13,7 +13,7 @@ import (
 	"github.com/trvita/go-ical"
 )
 
-func InputString(r io.Reader, message string) (string, error) {
+func String(r io.Reader, message string) (string, error) {
 	reader := bufio.NewReader(r)
 	if r == r {
 		fmt.Print(message)
@@ -26,12 +26,12 @@ func InputString(r io.Reader, message string) (string, error) {
 	return strings.TrimSpace(str), nil
 }
 
-func InputCommands(comms string) []string {
+func Commands(comms string) []string {
 	commands := strings.Split(comms, "\n")
 	return commands
 }
 
-func InputInt(r io.Reader, message string) (int, error) {
+func Int(r io.Reader, message string) (int, error) {
 	var num int
 	reader := bufio.NewReader(r)
 	if r == r {
@@ -44,7 +44,7 @@ func InputInt(r io.Reader, message string) (int, error) {
 	return num, nil
 }
 
-func InputInts(r io.Reader, message string) ([]int, error) {
+func Ints(r io.Reader, message string) ([]int, error) {
 	reader := bufio.NewReader(r)
 	if r == r {
 		fmt.Print(message)
@@ -73,7 +73,7 @@ func InputInts(r io.Reader, message string) ([]int, error) {
 	return numbersInt, nil
 }
 
-func InputEvent(r io.Reader) (*mycal.Event, error) {
+func Event(r io.Reader) (*mycal.Event, error) {
 	var attendees []string
 	var summary, organizer, name, startDate, startTime, endDate, endTime, action, trigger string
 	var startDateTime, endDateTime time.Time
@@ -83,12 +83,12 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		return nil, err
 	}
 
-	summary, err = InputString(r, "Enter event summary: ")
+	summary, err = String(r, "Enter event summary: ")
 	if err != nil {
 		return nil, err
 	}
 	for {
-		name, err = InputString(r, "Enter event type [event, todo]: ")
+		name, err = String(r, "Enter event type [event, todo]: ")
 		if err != nil {
 			return nil, err
 		}
@@ -102,11 +102,11 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		}
 	}
 	for {
-		startDate, err = InputString(r, "Enter event start date (YYYY.MM.DD): ")
+		startDate, err = String(r, "Enter event start date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		startTime, err = InputString(r, "Enter event start time (HH.MM.SS): ")
+		startTime, err = String(r, "Enter event start time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +118,11 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		break
 	}
 	for {
-		endDate, err = InputString(r, "Enter event end date (YYYY.MM.DD): ")
+		endDate, err = String(r, "Enter event end date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		endTime, err = InputString(r, "Enter event end time (HH.MM.SS): ")
+		endTime, err = String(r, "Enter event end time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		break
 	}
 	for {
-		attendee, err := InputString(r, "Enter attendee email (or 0 to finish): ")
+		attendee, err := String(r, "Enter attendee email (or 0 to finish): ")
 		if err != nil {
 			return nil, err
 		}
@@ -144,13 +144,13 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer, err = InputString(r, "Enter organizer email: ")
+		organizer, err = String(r, "Enter organizer email: ")
 		if err != nil {
 			return nil, err
 		}
 
 	}
-	hasalarm, err := InputString(r, "Add alarm [y/n]: ")
+	hasalarm, err := String(r, "Add alarm [y/n]: ")
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 		}, nil
 	}
 	if hasalarm == "y" {
-		action, err := InputString(r, "Enter action: [d - display, e - email]: ")
+		action, err := String(r, "Enter action: [d - display, e - email]: ")
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +194,7 @@ func InputEvent(r io.Reader) (*mycal.Event, error) {
 	}, nil
 }
 
-func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
+func RecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 	var attendees []string
 	var byDay, byMonthDay, byYearDay, byMonth, byWeekNo, bySetPos, byHour []int
 	var summary, name, startDate, startTime, freq, untilDate, untilTime, organizer string
@@ -205,16 +205,16 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	summary, err = InputString(r, "Enter event summary: ")
+	summary, err = String(r, "Enter event summary: ")
 	if err != nil {
 		return nil, err
 	}
 	for {
-		startDate, err = InputString(r, "Enter event start date (YYYY.MM.DD): ")
+		startDate, err = String(r, "Enter event start date (YYYY.MM.DD): ")
 		if err != nil {
 			return nil, err
 		}
-		startTime, err = InputString(r, "Enter event start time (HH.MM.SS): ")
+		startTime, err = String(r, "Enter event start time (HH.MM.SS): ")
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 	}
 	cont := true
 	for cont {
-		freq, err = InputString(r, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
+		freq, err = String(r, "Enter frequency [Y, MO, W, D, H, MI, S]: ")
 		if err != nil {
 			return nil, err
 		}
@@ -256,27 +256,27 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 			cont = false
 		}
 	}
-	interval, err = InputInt(r, "Enter interval: ")
+	interval, err = Int(r, "Enter interval: ")
 	if err != nil {
 		return nil, err
 	}
-	ans, err = InputInt(r, "Count, until or skip? [1/2/0]: ")
+	ans, err = Int(r, "Count, until or skip? [1/2/0]: ")
 	if err != nil {
 		return nil, err
 	}
 	switch ans {
 	case 1:
-		count, err = InputInt(r, "Enter count: ")
+		count, err = Int(r, "Enter count: ")
 		if err != nil {
 			return nil, err
 		}
 	case 2:
 		for {
-			untilDate, err = InputString(r, "Enter event start date (YYYY.MM.DD): ")
+			untilDate, err = String(r, "Enter event start date (YYYY.MM.DD): ")
 			if err != nil {
 				return nil, err
 			}
-			untilTime, err = InputString(r, "Enter event start time (HH.MM.SS): ")
+			untilTime, err = String(r, "Enter event start time (HH.MM.SS): ")
 			if err != nil {
 				return nil, err
 			}
@@ -290,37 +290,37 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		}
 	}
 
-	byDay, err = InputInts(r, "Enter by days [num of day in week, num of day in year]: ")
+	byDay, err = Ints(r, "Enter by days [num of day in week, num of day in year]: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonthDay, err = InputInts(r, "Enter by month days: ")
+	byMonthDay, err = Ints(r, "Enter by month days: ")
 	if err != nil {
 		return nil, err
 	}
-	byYearDay, err = InputInts(r, "Enter by year days: ")
+	byYearDay, err = Ints(r, "Enter by year days: ")
 	if err != nil {
 		return nil, err
 	}
-	byMonth, err = InputInts(r, "Enter by months: ")
+	byMonth, err = Ints(r, "Enter by months: ")
 	if err != nil {
 		return nil, err
 	}
-	byWeekNo, err = InputInts(r, "Enter by week numbers: ")
+	byWeekNo, err = Ints(r, "Enter by week numbers: ")
 	if err != nil {
 		return nil, err
 	}
-	bySetPos, err = InputInts(r, "Enter position by set: ")
+	bySetPos, err = Ints(r, "Enter position by set: ")
 	if err != nil {
 		return nil, err
 	}
-	byHour, err = InputInts(r, "Enter by hour numbers")
+	byHour, err = Ints(r, "Enter by hour numbers")
 	if err != nil {
 		return nil, err
 	}
 
 	for {
-		attendee, err := InputString(r, "Enter attendee email (or 0 to finish): ")
+		attendee, err := String(r, "Enter attendee email (or 0 to finish): ")
 		if err != nil {
 			return nil, err
 		}
@@ -330,7 +330,7 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		attendees = append(attendees, attendee)
 	}
 	if attendees != nil {
-		organizer, err = InputString(r, "Enter organizer email: ")
+		organizer, err = String(r, "Enter organizer email: ")
 		if err != nil {
 			return nil, err
 		}
@@ -358,16 +358,16 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		ByHour:     byHour}, nil
 }
 
-func InputModifications(r io.Reader) (*mycal.Modifications, error) {
+func Modifications(r io.Reader) (*mycal.Modifications, error) {
 	var partstat, delegateto, calendarName, email, answer string
 	var err error
 
-	email, err = InputString(r, "Enter your email: ")
+	email, err = String(r, "Enter your email: ")
 	if err != nil {
 		return nil, err
 	}
 	fmt.Println("-1")
-	answer, err = InputString(r, "Accept, decline, delegate event? [y, n, d]: ")
+	answer, err = String(r, "Accept, decline, delegate event? [y, n, d]: ")
 	if err != nil {
 		return nil, err
 	}
@@ -376,13 +376,13 @@ func InputModifications(r io.Reader) (*mycal.Modifications, error) {
 	case "y":
 		fmt.Println("1")
 		partstat = "ACCEPTED"
-		calendarName, err = InputString(r, "Enter which calendar event goes to: ")
+		calendarName, err = String(r, "Enter which calendar event goes to: ")
 		if err != nil {
 			return nil, err
 		}
 	case "d":
 		partstat = string(ical.ParamDelegatedTo)
-		delegateto, err = InputString(r, "Enter who to delegate: ")
+		delegateto, err = String(r, "Enter who to delegate: ")
 		if err != nil {
 			return nil, err
 		}
