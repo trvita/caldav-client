@@ -27,7 +27,7 @@ var calendars = []string{
 }
 
 var calendarsAttend = []string{
-	"not-shared", "shared",
+	"some-cal",
 }
 
 var uids = []string{
@@ -186,6 +186,23 @@ func TestAttend_Setup(t *testing.T) {
 	}
 }
 
+func TestAttend_Clear(t *testing.T) {
+	for user := range users {
+		_, client, homeset, ctx := setupClient(t, user)
+		for i := range calendarsAttend {
+			Delete(ctx, client, homeset+calendarsAttend[i])
+		}
+		// also clear inbox
+		resp, err := GetEvents(ctx, client, homeset, calendars[4])
+		if err == nil {
+			for _, r := range resp {
+				err = Delete(ctx, client, r.Path)
+				assert.NoError(t, err)
+			}
+		}
+	}
+}
+
 func TestAttend_Invite(t *testing.T) {
 	currentUser := "user1"
 	_, client, homeset, ctx := setupClient(t, currentUser)
@@ -197,7 +214,7 @@ func TestAttend_Invite(t *testing.T) {
 		Uid:           uids[4],
 		DateTimeStart: time.Now(),
 		DateTimeEnd:   time.Now(),
-		Attendees:     []string{users["user3"][email]},
+		Attendees:     []string{users["user3"][email], users["user2"][email]},
 		Organizer:     users[currentUser][email],
 	}
 	event, err := GetEvent(e)
@@ -230,7 +247,7 @@ func TestAttend_Reply(t *testing.T) {
 	eventFileName = eventFileName[len(homeset+calendars[4]+"/") : len(eventFileName)-len(".ics")]
 
 	var mods *Modifications = &Modifications{
-		PartStat:     "DECLINED",
+		PartStat:     "ACCEPTED",
 		LastModified: time.Now(),
 		DelegateTo:   "",
 		CalendarName: calendars[1],
@@ -259,23 +276,6 @@ func TestAttend_Check(t *testing.T) {
 	// 		fmt.Println(status)
 	// 	}
 	// }
-}
-
-func TestAttend_Clear(t *testing.T) {
-	for user := range users {
-		_, client, homeset, ctx := setupClient(t, user)
-		for i := range calendarsAttend {
-			Delete(ctx, client, homeset+calendarsAttend[i])
-		}
-		// also clear inbox
-		resp, err := GetEvents(ctx, client, homeset, calendars[4])
-		if err == nil {
-			for _, r := range resp {
-				err = Delete(ctx, client, r.Path)
-				assert.NoError(t, err)
-			}
-		}
-	}
 }
 
 func TestAttend_notShared(t *testing.T) {

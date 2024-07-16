@@ -140,22 +140,22 @@ func ListCalendars(ctx context.Context, client *caldav.Client, homeset string) e
 // tested
 func CreateCalendar(ctx context.Context, httpClient webdav.HTTPClient, url, homeset, calendarName, description string) error {
 	timezone := `
-BEGIN:VTIMEZONE
-TZID:Asia/Krasnoyarsk
-TZURL:https://www.tzurl.org/zoneinfo/Asia/Krasnoyarsk
-BEGIN:STANDARD
-TZNAME:+06
-TZOFFSETFROM:+061126
-TZOFFSETTO:+0600
-DTSTART:19200106T000000
-END:STANDARD
-BEGIN:DAYLIGHT
-TZNAME:+07
-TZOFFSETFROM:+0700
-TZOFFSETTO:+0700
-DTSTART:19910331T020000
-END:DAYLIGHT
-END:VTIMEZONE`
+	BEGIN:VTIMEZONE
+	TZID:Asia/Krasnoyarsk
+	TZURL:https://www.tzurl.org/zoneinfo/Asia/Krasnoyarsk
+	BEGIN:STANDARD
+	TZNAME:+06
+	TZOFFSETFROM:+061126
+	TZOFFSETTO:+0600
+	DTSTART:19200106T000000
+	END:STANDARD
+	BEGIN:DAYLIGHT
+	TZNAME:+07
+	TZOFFSETFROM:+0700
+	TZOFFSETTO:+0700
+	DTSTART:19910331T020000
+	END:DAYLIGHT
+	END:VTIMEZONE`
 	reqBody := fmt.Sprintf(`
 	<C:mkcalendar xmlns:D='DAV:' xmlns:C='urn:ietf:params:xml:ns:caldav'>
 			<D:set>
@@ -231,7 +231,7 @@ func GetEvents(ctx context.Context, client *caldav.Client, homeset, calendarName
 func GetByUid(ctx context.Context, client *caldav.Client, homeset, calendarName, uid string) ([]caldav.CalendarObject, error) {
 	query := &caldav.CalendarQuery{
 		CompRequest: caldav.CalendarCompRequest{
-			Name:  "VCALENDAR",
+			Name: "VCALENDAR",
 			Comps: []caldav.CalendarCompRequest{{
 				Name:     "VEVENT",
 				AllProps: true,

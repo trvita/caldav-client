@@ -6,14 +6,12 @@ import (
 	"io"
 	"log"
 	"strings"
-	"time"
 
 	webdav "github.com/trvita/caldav-client-yandex"
 	"github.com/trvita/caldav-client-yandex/caldav"
-	
-	"github.com/trvita/caldav-client/mycal"
+
 	"github.com/trvita/caldav-client/input"
-	"github.com/trvita/go-ical"
+	"github.com/trvita/caldav-client/mycal"
 )
 
 var URL = "http://127.0.0.1:90/dav.php"
@@ -49,49 +47,13 @@ func GetUsernameBaikal(homeset string) string {
 	return username
 }
 
-func GetModifications(r io.Reader) (*mycal.Modifications, error) {
-	var partstat, delegateto, calendarName, email string
-	var err error
-	var answer byte
-
-	email, err = input.InputString(r, "Enter your email: ")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Accept, decline, delegate event? [y, n, d]")
-	fmt.Scan(&answer)
-	switch answer {
-	case 'y':
-		partstat = "ACCEPTED"
-		calendarName, err = input.InputString(r, "Enter which calendar event goes to: ")
-		if err != nil {
-			return nil, err
-		}
-	case 'n':
-		partstat = "DECLINED"
-	case 'd':
-		partstat = string(ical.ParamDelegatedTo)
-		delegateto, err = input.InputString(r, "Enter who to delegate: ")
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &mycal.Modifications{
-		Email:        email,
-		PartStat:     partstat,
-		DelegateTo:   "mailto:" + delegateto,
-		CalendarName: calendarName,
-		LastModified: time.Now(),
-	}, nil
-}
-
 func PrintEvents(resp []caldav.CalendarObject) {
 	for _, calendarObject := range resp {
 		fmt.Printf("path: %s\n", calendarObject.Path)
 		for _, event := range calendarObject.Data.Children {
 			for _, prop := range event.Props {
 				for _, p := range prop {
-					fmt.Printf("%s: %s\n", p.Name, p.Value)
+					fmt.Printf("name: %s, value: %s\n", p.Name, p.Value)
 				}
 			}
 			fmt.Println()
@@ -370,7 +332,7 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			if err != nil {
 				return err
 			}
-			mods, err := GetModifications(r)
+			mods, err := input.InputModifications(r)
 			if err != nil {
 				return err
 			}

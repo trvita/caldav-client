@@ -357,3 +357,45 @@ func InputRecurrentEvent(r io.Reader) (*mycal.ReccurentEvent, error) {
 		BySetPos:   bySetPos,
 		ByHour:     byHour}, nil
 }
+
+func InputModifications(r io.Reader) (*mycal.Modifications, error) {
+	var partstat, delegateto, calendarName, email, answer string
+	var err error
+
+	email, err = InputString(r, "Enter your email: ")
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-1")
+	answer, err = InputString(r, "Accept, decline, delegate event? [y, n, d]: ")
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("0")
+	switch answer {
+	case "y":
+		fmt.Println("1")
+		partstat = "ACCEPTED"
+		calendarName, err = InputString(r, "Enter which calendar event goes to: ")
+		if err != nil {
+			return nil, err
+		}
+	case "d":
+		partstat = string(ical.ParamDelegatedTo)
+		delegateto, err = InputString(r, "Enter who to delegate: ")
+		if err != nil {
+			return nil, err
+		}
+	default:
+		fmt.Println("2")
+		partstat = "DECLINED"
+	}
+	fmt.Println("3")
+	return &mycal.Modifications{
+		Email:        email,
+		PartStat:     partstat,
+		DelegateTo:   "mailto:" + delegateto,
+		CalendarName: calendarName,
+		LastModified: time.Now(),
+	}, nil
+}
