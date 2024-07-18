@@ -310,8 +310,8 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 	fmt.Println("Current calendar: ", calendarName)
 	for {
 		fmt.Println("1. List events")
-		fmt.Println("2. Modify event")
-		fmt.Println("3. Accept or decline event")
+		fmt.Println("2. Accept/decline event")
+		fmt.Println("3. Update event")
 		fmt.Println("0. Return to calendar menu")
 
 		var answer int
@@ -328,7 +328,7 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 			if err != nil {
 				return err
 			}
-			eventPath, err := input.String(r, "Enter path to event: ")
+			eventPath, err := input.String(r, "Enter filename (without .ics) of event: ")
 			if err != nil {
 				return err
 			}
@@ -337,6 +337,23 @@ func InboxMenu(ctx context.Context, client *caldav.Client, homeset string, calen
 				return err
 			}
 			err = mycal.ModifyAttendance(ctx, client, homeset, calendarName, eventUID, eventPath, mods)
+			if err != nil {
+				return err
+			}
+		case 3:
+			eventUID, err := input.String(r, "Enter event UID:  ")
+			if err != nil {
+				return err
+			}
+			eventPath, err := input.String(r, "Enter filename (without .ics) of event: ")
+			if err != nil {
+				return err
+			}
+			updateCalendarName, err := input.String(r, "Enter calendar name to be put in:")
+			if err != nil {
+				return err
+			}
+			err = mycal.UpdateEvent(ctx, client, homeset, updateCalendarName, eventUID, eventPath)
 			if err != nil {
 				return err
 			}

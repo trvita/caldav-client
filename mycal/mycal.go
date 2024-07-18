@@ -542,7 +542,7 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	if err != nil {
 		return err
 	}
-	newEventUrl := homeset[9:] + mods.CalendarName + "/" + eventUID + ".ics"
+	newEventURL := homeset[9:] + mods.CalendarName + "/" + eventPath + ".ics"
 
 	var att ical.Prop
 	for _, att = range comp.Props.Values(ical.PropAttendee) {
@@ -555,19 +555,18 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 		}
 	}
 
-	if mods.PartStat != "" {
-		if mods.PartStat == "DECLINED" {
-			err = Delete(ctx, client, eventURL)
-			if err != nil {
-				return err
-			} else {
-				return nil
-			}
-		}
-		if mods.PartStat == "ACCEPTED" {
-			att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
+	if mods.PartStat == "DECLINED" {
+		err = Delete(ctx, client, eventURL)
+		if err != nil {
+			return err
+		} else {
+			return nil
 		}
 	}
+	if mods.PartStat == "ACCEPTED" {
+		att.Params.Set(ical.ParamParticipationStatus, mods.PartStat)
+	}
+	// add delegation support
 	if !mods.LastModified.IsZero() {
 		comp.Props.SetDateTime(ical.PropLastModified, mods.LastModified)
 	}
@@ -581,8 +580,7 @@ func ModifyAttendance(ctx context.Context, client *caldav.Client, homeset, calen
 	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
 	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
 	calendar.Children = append(calendar.Children, comp)
-
-	_, err = client.PutCalendarObject(ctx, newEventUrl, calendar)
+	_, err = client.PutCalendarObject(ctx, newEventURL, calendar)
 	if err != nil {
 		return err
 	}
@@ -599,7 +597,7 @@ func PutAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, 
 
 	prop := ical.NewProp(ical.PropAttendee)
 	prop.Params.Add(ical.ParamParticipationStatus, "NEEDS-ACTION")
-	prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
+	//prop.Params.Add(ical.ParamRole, "REQ-PARTICIPANT")
 	prop.Value = "mailto:" + attendee
 	comp.Props.Add(prop)
 
@@ -619,4 +617,25 @@ func PutAttendee(ctx context.Context, client *caldav.Client, attendee, homeset, 
 // TODO write func that requests attendees aka attendee syncronization
 func LookUpAttendees() {
 
+}
+
+func UpdateEvent(ctx context.Context, client *caldav.Client, homeset, calendarName, eventUID, eventPath string) error {
+	eventURL := homeset[9:] + "inbox/" + eventPath + ".ics"
+	oldEventURL := homeset[9:] + calendarName + "/" + eventUID + ".ics"
+	comp, err := FindEvent(ctx, client, eventURL, eventUID)
+	if err != nil {
+		return err
+	}
+	comp.Props.SetDateTime(ical.PropLastModified, time.Now())
+
+	calendar := ical.NewCalendar()
+	calendar.Props.SetText(ical.PropVersion, "2.0")
+	calendar.Props.SetText(ical.PropProductID, "-//trvita//EN")
+	calendar.Props.SetText(ical.PropCalendarScale, "GREGORIAN")
+	calendar.Children = append(calendar.Children, comp)
+	_, err = client.PutCalendarObject(ctx, oldEventURL, calendar)
+	if err != nil {
+		return err
+	}
+	return nil
 }

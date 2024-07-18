@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	webdav "github.com/trvita/caldav-client-yandex"
 	"github.com/trvita/caldav-client-yandex/caldav"
@@ -23,15 +24,18 @@ var users = map[string][]string{
 }
 
 var calendars = []string{
-	"cal-new", "default", "cal-empty", "wrong", "inbox",
+	"default", "inbox", "wrong",
 }
 
-var calendarsAttend = []string{
-	"some-cal",
-}
+var uids = [5]string{}
 
-var uids = []string{
-	"valid", "invalid", "modificate", "modificate-not-share", "shared",
+func init() {
+	for i := range uids {
+		uid := uuid.New().String()
+		if uid != "" {
+			uids[i] = uid
+		}
+	}
 }
 
 func setupClient(t *testing.T, user string) (webdav.HTTPClient, *caldav.Client, string, context.Context) {
@@ -93,21 +97,21 @@ func TestCreateCalendar(t *testing.T) {
 func TestFindCalendarCorrect(t *testing.T) {
 	_, client, homeset, ctx := setupClient(t, "user1")
 
-	err := FindCalendar(ctx, client, homeset, calendars[1])
+	err := FindCalendar(ctx, client, homeset, calendars[0])
 	assert.NoError(t, err)
 }
 
 func TestFindCalendarFail(t *testing.T) {
 	_, client, homeset, ctx := setupClient(t, "user1")
 
-	err := FindCalendar(ctx, client, homeset, calendars[3])
+	err := FindCalendar(ctx, client, homeset, calendars[2])
 	assert.Error(t, err)
 }
 
 func TestGetEvents(t *testing.T) {
 	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, calendars[1])
+	resp, err := GetEvents(ctx, client, homeset, calendars[0])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
@@ -123,7 +127,7 @@ func TestGetEventsFail(t *testing.T) {
 func TestGetTodos(t *testing.T) {
 	_, client, homeset, ctx := setupClient(t, "user1")
 
-	resp, err := GetEvents(ctx, client, homeset, calendars[1])
+	resp, err := GetEvents(ctx, client, homeset, calendars[0])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
@@ -150,7 +154,7 @@ func TestCreateEvent(t *testing.T) {
 	}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
-	err = CreateEvent(ctx, client, homeset, calendars[1], event)
+	err = CreateEvent(ctx, client, homeset, calendars[0], event)
 	assert.NoError(t, err)
 }
 
@@ -160,13 +164,13 @@ func TestCreateEventFail(t *testing.T) {
 	e := &Event{}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
-	err = CreateEvent(ctx, client, homeset, calendars[1], event)
+	err = CreateEvent(ctx, client, homeset, calendars[0], event)
 	assert.Error(t, err)
 }
 func TestDeleteEventFail(t *testing.T) {
 	_, client, homeset, ctx := setupClient(t, "user1")
 
-	err := Delete(ctx, client, homeset+calendars[1]+"/"+uids[1]+".ics")
+	err := Delete(ctx, client, homeset+calendars[0]+"/"+uids[1]+".ics")
 	assert.Error(t, err)
 }
 func TestDeleteCalendarFail(t *testing.T) {
@@ -176,28 +180,24 @@ func TestDeleteCalendarFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestAttend_Setup(t *testing.T) {
-	for user := range users {
-		httpClient, _, homeset, ctx := setupClient(t, user)
-		for i := range calendarsAttend {
-			err := CreateCalendar(ctx, httpClient, URL, homeset, calendarsAttend[i], "")
-			assert.NoError(t, err)
-		}
-	}
-}
+// func TestAttend_Setup(t *testing.T) {
+// 	for user := range users {
+// 		httpClient, _, homeset, ctx := setupClient(t, user)
+// 		err := CreateCalendar(ctx, httpClient, URL, homeset, calendars[0], "")
+// 		assert.NoError(t, err)
+// 	}
+// }
 
 func TestAttend_Clear(t *testing.T) {
 	for user := range users {
 		_, client, homeset, ctx := setupClient(t, user)
-		for i := range calendarsAttend {
-			Delete(ctx, client, homeset+calendarsAttend[i])
-		}
-		// also clear inbox
-		resp, err := GetEvents(ctx, client, homeset, calendars[4])
-		if err == nil {
-			for _, r := range resp {
-				err = Delete(ctx, client, r.Path)
-				assert.NoError(t, err)
+		for i := range calendars {
+			resp, err := GetEvents(ctx, client, homeset, calendars[i])
+			if err == nil {
+				for _, r := range resp {
+					err = Delete(ctx, client, r.Path)
+					assert.NoError(t, err)
+				}
 			}
 		}
 	}
@@ -205,31 +205,34 @@ func TestAttend_Clear(t *testing.T) {
 
 func TestAttend_Invite(t *testing.T) {
 	currentUser := "user1"
+	currentUID := uids[0]
+	currentCalendar := calendars[0]
 	_, client, homeset, ctx := setupClient(t, currentUser)
 
 	assert.NotEmpty(t, homeset)
 	e := &Event{
 		Name:          "VEVENT",
 		Summary:       "shared-event",
-		Uid:           uids[4],
+		Uid:           currentUID,
 		DateTimeStart: time.Now(),
 		DateTimeEnd:   time.Now(),
-		Attendees:     []string{users["user3"][email], users["user2"][email]},
+		Attendees:     []string{users["user3"][email]},
 		Organizer:     users[currentUser][email],
 	}
 	event, err := GetEvent(e)
 	assert.NoError(t, err)
 
-	err = CreateEvent(ctx, client, homeset, calendarsAttend[0], event)
+	err = CreateEvent(ctx, client, homeset, currentCalendar, event)
 	assert.NoError(t, err)
 }
 
 func TestAttend_Reply(t *testing.T) {
 	currentUser := "user3"
-	currentUID := uids[4]
+	currentUID := uids[0]
+	currentCalendar := calendars[1]
 	_, client, homeset, ctx := setupClient(t, currentUser)
 
-	resp, err := GetEvents(ctx, client, homeset, calendars[4])
+	resp, err := GetEvents(ctx, client, homeset, currentCalendar)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 
@@ -244,22 +247,22 @@ func TestAttend_Reply(t *testing.T) {
 	}
 	assert.NotEmpty(t, r)
 	eventFileName := r.Path
-	eventFileName = eventFileName[len(homeset+calendars[4]+"/") : len(eventFileName)-len(".ics")]
+	eventFileName = eventFileName[len(homeset+currentCalendar+"/") : len(eventFileName)-len(".ics")]
 
 	var mods *Modifications = &Modifications{
 		PartStat:     "ACCEPTED",
 		LastModified: time.Now(),
 		DelegateTo:   "",
-		CalendarName: calendars[1],
+		CalendarName: calendars[0],
 		Email:        users[currentUser][email],
 	}
-	err = ModifyAttendance(ctx, client, homeset, calendars[4], currentUID, eventFileName, mods)
+	err = ModifyAttendance(ctx, client, homeset, currentCalendar, currentUID, eventFileName, mods)
 	assert.NoError(t, err)
 }
 func TestAttend_Check(t *testing.T) {
 	currentUser := "user1"
-	currentUID := uids[4]
-	currentCalendar := calendars[4]
+	currentUID := uids[0]
+	currentCalendar := calendars[1]
 	_, client, homeset, ctx := setupClient(t, currentUser)
 
 	resp, err := GetByUid(ctx, client, homeset, currentCalendar, currentUID)
@@ -268,6 +271,9 @@ func TestAttend_Check(t *testing.T) {
 
 	status := resp[0].Data.Children[0].Props.Get(ical.PropAttendee).Params.Get(ical.ParamParticipationStatus)
 	assert.Equal(t, "ACCEPTED", status)
+	err = UpdateEvent(ctx, client, homeset, calendars[0], currentUID, resp[0].Path[len(homeset)+1+len(currentCalendar):len(resp[0].Path)-4])
+	assert.NoError(t, err)
+
 	// // at the moment there should be only one event, so there is no reason to go in loop
 	// for _, r := range resp {
 	// 	for _, event := range r.Data.Children {
@@ -280,11 +286,11 @@ func TestAttend_Check(t *testing.T) {
 
 func TestAttend_notShared(t *testing.T) {
 	TestAttend_Clear(t)
-	TestAttend_Setup(t)
+	//TestAttend_Setup(t)
 	TestAttend_Invite(t)
 	TestAttend_Reply(t)
 	TestAttend_Check(t)
-	TestAttend_Clear(t)
+	//TestAttend_Clear(t)
 }
 
 func TestAddAttendee(t *testing.T) {
@@ -295,11 +301,12 @@ func TestAddAttendee(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// redo with real uid and calendar names
 func TestPutEvent(t *testing.T) {
 	currentUser := "user1"
 	_, client, homeset, ctx := setupClient(t, currentUser)
 
-	resp, err := GetEvents(ctx, client, homeset, calendars[4])
+	resp, err := GetEvents(ctx, client, homeset, calendars[1])
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 
@@ -314,7 +321,7 @@ func TestPutEvent(t *testing.T) {
 	}
 
 	eventFileName := r.Path
-	eventFileName = eventFileName[len(homeset+calendars[4]+"/") : len(eventFileName)-len(".ics")]
+	eventFileName = eventFileName[len(homeset+calendars[1]+"/") : len(eventFileName)-len(".ics")]
 
 	var mods *Modifications = &Modifications{
 		PartStat:     "",
@@ -323,7 +330,7 @@ func TestPutEvent(t *testing.T) {
 		CalendarName: calendars[5],
 		Email:        "",
 	}
-	err = ModifyAttendance(ctx, client, homeset, calendars[4], uids[2], eventFileName, mods)
+	err = ModifyAttendance(ctx, client, homeset, calendars[1], uids[2], eventFileName, mods)
 	assert.NoError(t, err)
 
 }

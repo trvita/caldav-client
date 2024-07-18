@@ -8,8 +8,6 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/teambition/rrule-go v1.8.2 h1:lIjpjvWTj9fFUZCmuoVDrKVOtdiyzbzc93qTmRVe/J8=
 github.com/teambition/rrule-go v1.8.2/go.mod h1:Ieq5AbrKGciP1V//Wq8ktsTXwSwJHDD5mD/wLBGl3p4=
-github.com/trvita/caldav-client v0.0.0-20240711075837-52a94addeeb1 h1:fOrgB0mcv893T0f0cGWeARYitovyu65+oCRzVwpui+Y=
-github.com/trvita/caldav-client v0.0.0-20240711075837-52a94addeeb1/go.mod h1:VB6YPO9/A8sQo6Ap/Jiu3B5KGvKflDq3mp3RjYlgMwc=
 github.com/trvita/caldav-client-yandex v0.0.0-20240711082626-f2c2acc480d7 h1:mkT0k7DpCh+FFZQn6XowdCsmMw5Ws9umow36gDVW5Ag=
 github.com/trvita/caldav-client-yandex v0.0.0-20240711082626-f2c2acc480d7/go.mod h1:TnI8pF1/W9TOTjiWktSHkM6ZVwx37rzlT5rRrW3II7U=
 github.com/trvita/go-ical v0.0.0-20240711074548-8d866d07304b h1:xC5TJhJYcT5/RmhLBXOFVbIFW/7TlCFK/a4RlTnAbWo=
